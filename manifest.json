@@ -1,0 +1,14 @@
+{
+	"name": "VimTabs",
+	"description": "Manage tabs with vim-inspired key bindings.",
+	"version": "0.1.0",
+	"manifest_version": 3,
+	"permissions": ["tabs", "scripting", "bookmarks"],
+	"host_permissions": ["<all_urls>"],
+	"action": {
+		"default_title": "VimTabs"
+	},
+	"background": {
+		"service_worker": "background.js"
+	}
+}

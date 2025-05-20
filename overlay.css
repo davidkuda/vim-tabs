@@ -1,0 +1,95 @@
+#vtm-backdrop {
+	position: fixed;
+	inset: 0;
+	backdrop-filter: blur(7px);
+	background: rgba(0, 0, 0, 0.25);
+	z-index: 2147483000;
+}
+#vtm-modal {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 82vw;
+	max-width: 1100px;
+	height: 72vh;
+	background: rgba(36, 36, 36, 0.95);
+	color: #f0f0f0;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	padding: 14px;
+	font: 14px system-ui, sans-serif;
+	overflow: hidden;
+	outline: none;
+}
+#vtm-columns {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: row;
+	gap: 8px;
+	overflow-x: auto;
+}
+.vtm-col {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 230px;
+	flex: 1 0 auto;
+}
+.vtm-card {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 10px;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	user-select: none;
+	transition: background 0.15s ease;
+}
+.vtm-card:not(.vtm-selected):hover {
+	background: rgba(255, 255, 255, 0.14);
+}
+.vtm-card.vtm-selected {
+	background: rgba(0, 140, 255, 0.45);
+	outline: 2px solid rgba(0, 140, 255, 0.8);
+}
+.vtm-card.vtm-removed {
+	opacity: 0.45;
+	text-decoration: line-through;
+}
+.vtm-favicon {
+	width: 16px;
+	height: 16px;
+}
+.vtm-title {
+	flex: 1 1 auto;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+/* help table */
+.vtm-help {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 8px;
+}
+.vtm-help th,
+.vtm-help td {
+	padding: 6px 10px;
+}
+.vtm-help tr:nth-child(even) {
+	background: rgba(255, 255, 255, 0.06);
+}
+.vtm-help code {
+	background: rgba(0, 0, 0, 0.35);
+	padding: 2px 5px;
+	border-radius: 4px;
+}
+.vtm-placeholder {
+	height: 32px;
+	margin: 2px 0;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.12);
+	filter: blur(2px);
+}
