@@ -1,0 +1,24 @@
+{
+  "name": "vim-tabs",
+  "version": "0.1.0",
+  "description": "browse your tabs with vim inspired key bindings",
+  "homepage": "https://github.com/davidkuda/vim-tabs#readme",
+  "bugs": {
+    "url": "https://github.com/davidkuda/vim-tabs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidkuda/vim-tabs.git"
+  },
+  "license": "ISC",
+  "author": "davidkuda",
+  "type": "commonjs",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.4",
+    "prettier": "^3.8.1"
+  }
+}
