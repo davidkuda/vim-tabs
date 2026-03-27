@@ -11,7 +11,6 @@ export function createOverlayDom() {
 
 	const footer = document.createElement("div")
 	footer.id = "vtm-footer"
-	footer.style.cssText = "padding:4px 6px;font-size:12px;opacity:0.7"
 
 	const trap = document.createElement("input")
 	trap.style.cssText = "position:absolute;opacity:0"
