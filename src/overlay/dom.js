@@ -60,12 +60,12 @@ export function applyOverlayFrame(backdrop, color, label) {
 	badge.textContent = label
 	badge.style.cssText = [
 		"position:absolute",
-		"top:14px",
-		"left:14px",
+		"top:20px",
+		"left:20px",
 		"pointer-events:none",
-		"padding:6px 10px",
-		"font:600 11px/1.1 system-ui,sans-serif",
-		"letter-spacing:0.08em",
+		"padding:14px 22px",
+		"font:600 3rem/0.95 system-ui,sans-serif",
+		"letter-spacing:-0.04em",
 		"text-transform:uppercase",
 		`background:${color}`,
 		"color:#f6f0ea",

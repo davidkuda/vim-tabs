@@ -119,12 +119,16 @@
 }
 
 .vtm-col-header {
+	display: inline-flex;
+	align-self: flex-start;
 	font-size: 10px;
 	font-weight: 700;
-	letter-spacing: 0.14em;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	padding: 2px 4px 10px;
-	opacity: 0.95;
+	padding: 6px 10px;
+	margin: 2px 0 10px;
+	color: #f6f0ea;
+	background: rgba(255, 255, 255, 0.12);
 }
 
 .vtm-card {

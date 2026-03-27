@@ -86,7 +86,7 @@ export function createRenderer(state, columns, footer) {
 
 			const header = document.createElement("div")
 			header.className = "vtm-col-header"
-			header.style.color = windowColor.accent
+			header.style.background = windowColor.accent
 			header.textContent = windowColor.label
 			col.appendChild(header)
 
