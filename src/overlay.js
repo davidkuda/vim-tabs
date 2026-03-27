@@ -1,8 +1,9 @@
 import { createActions } from "./overlay/actions.js"
-import { createOverlayDom } from "./overlay/dom.js"
+import { applyOverlayFrame, createOverlayDom } from "./overlay/dom.js"
 import { createEventHandlers } from "./overlay/events.js"
 import { createRenderer } from "./overlay/render.js"
 import { createState, createUndoStack } from "./overlay/state.js"
+import { getWindowColor } from "./shared/window-colors.js"
 
 if (!document.getElementById("vtm-backdrop")) {
 	const state = createState()
@@ -21,6 +22,11 @@ if (!document.getElementById("vtm-backdrop")) {
 	chrome.runtime.sendMessage({ type: "getData" }, (resp) => {
 		state.wins = resp.wins
 		state.sel = resp.activeSel
+		const currentWindow = state.wins[state.sel.w]
+		if (currentWindow) {
+			const windowColor = getWindowColor(currentWindow, state.sel.w)
+			applyOverlayFrame(backdrop, windowColor.accent, windowColor.label)
+		}
 		renderer.render()
 		events.attachListeners()
 	})

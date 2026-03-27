@@ -1,3 +1,5 @@
+import { getWindowColor } from "../shared/window-colors.js"
+
 export function createRenderer(state, columns, footer) {
 	function buildCard(tab, wi, ti) {
 		const card = document.createElement("div")
@@ -41,10 +43,19 @@ export function createRenderer(state, columns, footer) {
 		columns.innerHTML = ""
 
 		state.wins.forEach((win, wi) => {
+			const windowColor = getWindowColor(win, wi)
 			const col = document.createElement("div")
 			col.className = "vtm-col"
 			col.dataset.w = wi
+			col.style.borderColor = windowColor.accent
+			col.style.background = windowColor.surface
 			columns.appendChild(col)
+
+			const header = document.createElement("div")
+			header.className = "vtm-col-header"
+			header.style.color = windowColor.accent
+			header.textContent = windowColor.label
+			col.appendChild(header)
 
 			win.tabs.forEach((tab, ti) => {
 				col.appendChild(buildCard(tab, wi, ti))

@@ -1,9 +1,18 @@
 import { applyActions } from "./background/actions.js"
 import { getData } from "./background/data.js"
 import { focusByDescriptor, focusById } from "./background/focus.js"
-import { injectOverlay, openFallbackPage } from "./background/overlay.js"
+import {
+	clearWindowBorders,
+	injectOverlay,
+	openFallbackPage,
+	showWindowBorders,
+} from "./background/overlay.js"
+
+let activePreviewWins = []
 
 async function handleCommit(msg, senderTab) {
+	await clearWindowBorders(activePreviewWins)
+	activePreviewWins = []
 	await applyActions(msg.actions || [])
 
 	if (msg.postFocus) {
@@ -22,11 +31,18 @@ async function handleCommit(msg, senderTab) {
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
+	await clearWindowBorders(activePreviewWins)
+
+	const { wins } = await getData()
+	activePreviewWins = wins
+
 	try {
 		await injectOverlay(tab.id)
 	} catch (error) {
 		await openFallbackPage()
 	}
+
+	await showWindowBorders(wins)
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
