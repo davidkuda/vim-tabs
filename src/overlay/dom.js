@@ -6,6 +6,21 @@ export function createOverlayDom() {
 	modal.id = "vtm-modal"
 	modal.tabIndex = 0
 
+	const chrome = document.createElement("div")
+	chrome.id = "vtm-shell"
+
+	const topbar = document.createElement("div")
+	topbar.id = "vtm-topbar"
+	topbar.innerHTML = `
+		<div class="vtm-topbar-mark">
+			<span class="vtm-dot vtm-dot-rose"></span>
+			<span class="vtm-dot vtm-dot-pine"></span>
+			<span class="vtm-dot vtm-dot-gold"></span>
+		</div>
+		<div class="vtm-topbar-title">VimTabs</div>
+		<div class="vtm-topbar-meta">Keyboard Tab Manager</div>
+	`
+
 	const columns = document.createElement("div")
 	columns.id = "vtm-columns"
 
@@ -16,7 +31,8 @@ export function createOverlayDom() {
 	trap.style.cssText = "position:absolute;opacity:0"
 	trap.ariaHidden = "true"
 
-	modal.append(columns, footer, trap)
+	chrome.append(topbar, columns, footer)
+	modal.append(chrome, trap)
 	backdrop.appendChild(modal)
 	document.documentElement.appendChild(backdrop)
 	trap.focus({ preventScroll: true })

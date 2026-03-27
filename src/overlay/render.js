@@ -63,7 +63,10 @@ export function createRenderer(state, columns, footer) {
 		})
 
 		highlight()
-		footer.textContent = "press `?` to show keyboard shortcuts"
+		footer.innerHTML = `
+			<div class="vtm-footer-chip"><code>?</code><span>Shortcuts</span></div>
+			<div class="vtm-footer-copy">Navigate with vim keys, stage changes, then press <code>Esc</code> to apply.</div>
+		`
 	}
 
 	function renderHelp() {
@@ -129,7 +132,10 @@ export function createRenderer(state, columns, footer) {
 
 		help.appendChild(groups)
 		columns.appendChild(help)
-		footer.textContent = "press `?` or ESC to go back to the tabs overview"
+		footer.innerHTML = `
+			<div class="vtm-footer-chip"><code>Esc</code><span>Back to Tabs</span></div>
+			<div class="vtm-footer-copy">Return to the overview and keep moving without leaving the keyboard.</div>
+		`
 	}
 
 	function render() {
