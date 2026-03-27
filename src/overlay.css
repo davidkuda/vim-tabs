@@ -193,8 +193,15 @@
 	flex: 0 0 16px;
 }
 
-.vtm-title {
+.vtm-meta {
 	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.vtm-title {
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -206,6 +213,20 @@
 
 .vtm-card.vtm-selected .vtm-title {
 	font-weight: 400;
+}
+
+.vtm-url {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size: 11px;
+	line-height: 1.35;
+	color: rgba(246, 240, 234, 0.46);
+}
+
+.vtm-card.vtm-selected .vtm-url,
+.vtm-card.vtm-match .vtm-url {
+	color: rgba(246, 240, 234, 0.58);
 }
 
 .vtm-help {

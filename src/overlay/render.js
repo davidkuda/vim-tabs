@@ -27,12 +27,34 @@ export function createRenderer(state, columns, footer) {
 			card.appendChild(img)
 		}
 
+		const meta = document.createElement("div")
+		meta.className = "vtm-meta"
+
 		const title = document.createElement("span")
 		title.className = "vtm-title"
 		title.textContent = tab.title || tab.url
-		card.appendChild(title)
+
+		const url = document.createElement("span")
+		url.className = "vtm-url"
+		url.textContent = formatUrl(tab.url)
+
+		meta.append(title, url)
+		card.appendChild(meta)
 
 		return card
+	}
+
+	function formatUrl(url) {
+		if (!url) return ""
+		try {
+			const parsed = new URL(url)
+			const host = parsed.host.replace(/^www\./, "")
+			const path = `${parsed.pathname}${parsed.search}` || "/"
+			const compactPath = path.length > 36 ? `${path.slice(0, 33)}...` : path
+			return `${host}${compactPath === "/" ? "" : compactPath}`
+		} catch {
+			return url.length > 52 ? `${url.slice(0, 49)}...` : url
+		}
 	}
 
 	function highlight() {
