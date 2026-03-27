@@ -77,7 +77,7 @@ function mountWindowBorder(borderId, color, label) {
 		"letter-spacing:0.08em",
 		"text-transform:uppercase",
 		`background:${color}`,
-		"color:#111111",
+		"color:#f6f0ea",
 		"box-shadow:0 1px 0 rgba(255,255,255,0.22)",
 	].join(";")
 

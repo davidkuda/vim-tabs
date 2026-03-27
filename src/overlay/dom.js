@@ -31,6 +31,14 @@ export function createOverlayDom() {
 export function applyOverlayFrame(backdrop, color, label) {
 	backdrop.style.boxSizing = "border-box"
 	backdrop.style.border = `3px solid ${color}`
+	backdrop.style.background = [
+		`radial-gradient(circle at top left, ${color}96, transparent 34%)`,
+		`radial-gradient(circle at bottom right, ${color}68, transparent 42%)`,
+		`linear-gradient(135deg, ${color}34, rgba(255,255,255,0.04) 42%, rgba(0,0,0,0.05))`,
+		"rgba(10,10,12,0.14)",
+	].join(", ")
+	backdrop.style.backdropFilter = "blur(22px) saturate(1.05)"
+	backdrop.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,0.14)"
 
 	let badge = backdrop.querySelector("#vtm-window-badge")
 	if (!badge) {
@@ -50,7 +58,7 @@ export function applyOverlayFrame(backdrop, color, label) {
 		"letter-spacing:0.08em",
 		"text-transform:uppercase",
 		`background:${color}`,
-		"color:#111111",
+		"color:#f6f0ea",
 		"box-shadow:0 1px 0 rgba(255,255,255,0.22)",
 	].join(";")
 }
