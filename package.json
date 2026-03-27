@@ -13,9 +13,11 @@
 	"license": "ISC",
 	"author": "davidkuda",
 	"type": "commonjs",
-	"main": "background.js",
+	"main": "src/background.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"build": "node scripts/build.mjs",
+		"dev": "node scripts/build.mjs --watch",
+		"format": "prettier --write ."
 	},
 	"dependencies": {
 		"esbuild": "^0.27.4",

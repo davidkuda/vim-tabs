@@ -5,6 +5,7 @@
 	background: rgba(0, 0, 0, 0.25);
 	z-index: 2147483000;
 }
+
 #vtm-modal {
 	position: absolute;
 	top: 50%;
@@ -25,6 +26,7 @@
 	overflow: hidden;
 	outline: none;
 }
+
 #vtm-columns {
 	flex: 1 1 auto;
 	display: flex;
@@ -32,6 +34,7 @@
 	gap: 8px;
 	overflow-x: auto;
 }
+
 .vtm-col {
 	display: flex;
 	flex-direction: column;
@@ -39,6 +42,7 @@
 	min-width: 230px;
 	flex: 1 0 auto;
 }
+
 .vtm-card {
 	display: flex;
 	align-items: center;
@@ -49,45 +53,54 @@
 	user-select: none;
 	transition: background 0.15s ease;
 }
+
 .vtm-card:not(.vtm-selected):hover {
 	background: rgba(255, 255, 255, 0.14);
 }
+
 .vtm-card.vtm-selected {
 	background: rgba(0, 140, 255, 0.45);
 	outline: 2px solid rgba(0, 140, 255, 0.8);
 }
+
 .vtm-card.vtm-removed {
 	opacity: 0.45;
 	text-decoration: line-through;
 }
+
 .vtm-favicon {
 	width: 16px;
 	height: 16px;
 }
+
 .vtm-title {
 	flex: 1 1 auto;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-/* help table */
+
 .vtm-help {
 	width: 100%;
 	border-collapse: collapse;
 	margin-top: 8px;
 }
+
 .vtm-help th,
 .vtm-help td {
 	padding: 6px 10px;
 }
+
 .vtm-help tr:nth-child(even) {
 	background: rgba(255, 255, 255, 0.06);
 }
+
 .vtm-help code {
 	background: rgba(0, 0, 0, 0.35);
 	padding: 2px 5px;
 	border-radius: 4px;
 }
+
 .vtm-placeholder {
 	height: 32px;
 	margin: 2px 0;
