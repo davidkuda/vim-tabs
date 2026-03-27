@@ -1,6 +1,12 @@
 import { getWindowColor } from "../shared/window-colors.js"
 
 export function createRenderer(state, columns, footer) {
+	function matchesTab(tab, query) {
+		if (!query) return false
+		const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
+		return haystack.includes(query.toLowerCase())
+	}
+
 	function buildCard(tab, wi, ti) {
 		const card = document.createElement("div")
 		card.className = "vtm-card"
@@ -8,6 +14,11 @@ export function createRenderer(state, columns, footer) {
 		card.dataset.t = ti
 
 		if (tab._removed) card.classList.add("vtm-removed")
+		if (
+			matchesTab(tab, state.search.active ? state.search.query : state.search.lastQuery)
+		) {
+			card.classList.add("vtm-match")
+		}
 
 		if (tab.favIconUrl && !tab.favIconUrl.startsWith("chrome://")) {
 			const img = document.createElement("img")
@@ -63,9 +74,36 @@ export function createRenderer(state, columns, footer) {
 		})
 
 		highlight()
+		if (state.search.active) {
+			const matches = countMatches(state.search.query)
+			footer.innerHTML = `
+				<div class="vtm-footer-copy"><code>/</code>${state.search.query || ""}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
+			`
+			return
+		}
+
+		if (state.search.lastQuery) {
+			const matches = countMatches(state.search.lastQuery)
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
+			`
+			return
+		}
+
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Navigate with vim keys, stage changes, then press <code>Esc</code> to apply.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Press <code>/</code> to search tabs. Press <code>Esc</code> to apply.</div>
 		`
+	}
+
+	function countMatches(query) {
+		if (!query) return 0
+		let count = 0
+		state.wins.forEach((win) => {
+			win.tabs.forEach((tab) => {
+				if (matchesTab(tab, query)) count++
+			})
+		})
+		return count
 	}
 
 	function renderHelp() {
@@ -113,6 +151,8 @@ export function createRenderer(state, columns, footer) {
 			["j / k", "move down or up"],
 			["h / l", "jump between windows"],
 			["g / G", "go to top or bottom"],
+			["/ query", "search tabs"],
+			["n / N", "next / previous match"],
 			["Enter", "focus selected tab"],
 		])
 

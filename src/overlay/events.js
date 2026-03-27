@@ -1,6 +1,96 @@
 import { curTab } from "./state.js"
 
 export function createEventHandlers({ backdrop, render, renderTabs, state, actions }) {
+	function collectMatches(query) {
+		if (!query) return []
+
+		const needle = query.toLowerCase()
+		const matches = []
+
+		state.wins.forEach((win, wi) => {
+			win.tabs.forEach((tab, ti) => {
+				const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
+				if (haystack.includes(needle)) matches.push({ w: wi, t: ti })
+			})
+		})
+
+		return matches
+	}
+
+	function selectMatch(matches, index) {
+		if (!matches.length) return
+		const next = matches[((index % matches.length) + matches.length) % matches.length]
+		state.sel.w = next.w
+		state.sel.t = next.t
+	}
+
+	function startSearch() {
+		state.search.active = true
+		state.search.query = ""
+		state.search.originSel = { ...state.sel }
+		renderTabs()
+	}
+
+	function cancelSearch() {
+		if (state.search.originSel) {
+			state.sel = { ...state.search.originSel }
+		}
+		state.search.active = false
+		state.search.query = ""
+		state.search.originSel = null
+		renderTabs()
+	}
+
+	function clearSearch() {
+		if (state.search.active) {
+			cancelSearch()
+			return true
+		}
+		if (state.search.lastQuery) {
+			state.search.lastQuery = ""
+			renderTabs()
+			return true
+		}
+		return false
+	}
+
+	function updateSearch(query) {
+		state.search.query = query
+		const matches = collectMatches(query)
+		if (matches.length) selectMatch(matches, 0)
+		else if (state.search.originSel) state.sel = { ...state.search.originSel }
+		renderTabs()
+	}
+
+	function confirmSearch() {
+		if (state.search.query) {
+			const matches = collectMatches(state.search.query)
+			if (matches.length) {
+				state.search.lastQuery = state.search.query
+				selectMatch(matches, 0)
+			}
+		}
+		state.search.active = false
+		state.search.query = ""
+		state.search.originSel = null
+		renderTabs()
+	}
+
+	function jumpSearch(direction) {
+		if (!state.search.lastQuery) return
+
+		const matches = collectMatches(state.search.lastQuery)
+		if (!matches.length) return
+
+		const currentIndex = matches.findIndex((match) => {
+			return match.w === state.sel.w && match.t === state.sel.t
+		})
+
+		const nextIndex = currentIndex === -1 ? 0 : currentIndex + direction
+		selectMatch(matches, nextIndex)
+		renderTabs()
+	}
+
 	const nav = {
 		j: () =>
 			(state.sel.t = Math.min(
@@ -56,8 +146,31 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	}
 
 	function onKey(event) {
+		if (state.search.active) {
+			if (event.key === "Escape") {
+				event.preventDefault()
+				cancelSearch()
+				return
+			}
+			if (event.key === "Enter") {
+				event.preventDefault()
+				confirmSearch()
+				return
+			}
+			if (event.key === "Backspace") {
+				event.preventDefault()
+				updateSearch(state.search.query.slice(0, -1))
+				return
+			}
+			if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+				event.preventDefault()
+				updateSearch(state.search.query + event.key)
+			}
+			return
+		}
+
 		if (state.view === "help") {
-			if (event.key === "?" || event.key === "Escape") {
+			if (event.key === "?") {
 				event.preventDefault()
 				toggleHelp()
 			}
@@ -69,6 +182,21 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			toggleHelp()
 			return
 		}
+		if (event.key === "/") {
+			event.preventDefault()
+			startSearch()
+			return
+		}
+		if (event.key === "n") {
+			event.preventDefault()
+			jumpSearch(1)
+			return
+		}
+		if (event.key === "N") {
+			event.preventDefault()
+			jumpSearch(-1)
+			return
+		}
 		if (event.key === "G") {
 			event.preventDefault()
 			bottom()
@@ -77,6 +205,7 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		}
 		if (event.key === "Escape") {
 			event.preventDefault()
+			if (clearSearch()) return
 			commit()
 			return
 		}

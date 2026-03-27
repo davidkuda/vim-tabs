@@ -5,6 +5,12 @@ export function createState() {
 		yank: null,
 		queue: [],
 		view: "tabs",
+		search: {
+			active: false,
+			query: "",
+			lastQuery: "",
+			originSel: null,
+		},
 	}
 }
 
