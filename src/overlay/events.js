@@ -98,6 +98,12 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 				state.wins[state.sel.w].tabs.length - 1,
 			)),
 		k: () => (state.sel.t = Math.max(state.sel.t - 1, 0)),
+		J: () =>
+			(state.sel.t = Math.min(
+				state.sel.t + 5,
+				state.wins[state.sel.w].tabs.length - 1,
+			)),
+		K: () => (state.sel.t = Math.max(state.sel.t - 5, 0)),
 		h: () => (
 			(state.sel.w = Math.max(state.sel.w - 1, 0)),
 			(state.sel.t = Math.min(state.sel.t, state.wins[state.sel.w].tabs.length - 1))

@@ -170,6 +170,7 @@ export function createRenderer(state, columns, footer) {
 
 		addGroup("Navigation", [
 			["j / k", "move down or up"],
+			["J / K", "jump 5 tabs down or up"],
 			["h / l", "jump between windows"],
 			["g / G", "go to top or bottom"],
 			["/ query", "search tabs"],
