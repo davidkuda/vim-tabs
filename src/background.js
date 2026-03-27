@@ -2,17 +2,18 @@ import { applyActions } from "./background/actions.js"
 import { getData } from "./background/data.js"
 import { focusByDescriptor, focusById } from "./background/focus.js"
 import {
+	clearPreviewArtifacts,
 	clearWindowBorders,
 	injectOverlay,
 	openFallbackPage,
-	showWindowBorders,
+	showWindowPreviews,
 } from "./background/overlay.js"
-
-let activePreviewWins = []
+import { getPreviewSession } from "./background/session.js"
 
 async function handleCommit(msg, senderTab) {
-	await clearWindowBorders(activePreviewWins)
-	activePreviewWins = []
+	const session = await getPreviewSession()
+	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
+	await clearPreviewArtifacts()
 	await applyActions(msg.actions || [])
 
 	if (msg.postFocus) {
@@ -25,24 +26,36 @@ async function handleCommit(msg, senderTab) {
 		const { fallbackId } = await chrome.storage.local.get("fallbackId")
 		if (fallbackId && senderTab && senderTab.id === fallbackId) {
 			await chrome.tabs.remove(fallbackId)
-			await chrome.storage.local.remove("fallbackId")
+			await chrome.storage.local.remove([
+				"fallbackId",
+				"fallbackOriginalTabId",
+				"fallbackWindowId",
+			])
 		}
 	} catch {}
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
-	await clearWindowBorders(activePreviewWins)
+	const session = await getPreviewSession()
+	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
+	await clearPreviewArtifacts()
 
 	const { wins } = await getData()
-	activePreviewWins = wins
+	let overlayHostTabId = tab.id
 
 	try {
 		await injectOverlay(tab.id)
 	} catch (error) {
-		await openFallbackPage()
+		const fallback = await openFallbackPage(tab)
+		overlayHostTabId = fallback.id
 	}
 
-	await showWindowBorders(wins)
+	await showWindowPreviews(wins, tab.windowId)
+
+	try {
+		await chrome.windows.update(tab.windowId, { focused: true })
+		await chrome.tabs.update(overlayHostTabId, { active: true })
+	} catch {}
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

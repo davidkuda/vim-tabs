@@ -1,4 +1,5 @@
 import { getWindowColor } from "../shared/window-colors.js"
+import { clearPreviewSession, getPreviewSession, setPreviewSession } from "./session.js"
 
 const WINDOW_BORDER_ID = "vtm-window-border"
 
@@ -13,15 +14,18 @@ export async function injectOverlay(tabId) {
 	})
 }
 
-export async function openFallbackPage() {
+export async function openFallbackPage(tab) {
 	const fallback = await chrome.tabs.create({
+		windowId: tab.windowId,
 		url: chrome.runtime.getURL("manager.html"),
 		active: true,
 	})
 
-	try {
-		await chrome.storage.local.set({ fallbackId: fallback.id })
-	} catch {}
+	await chrome.storage.local.set({
+		fallbackId: fallback.id,
+		fallbackOriginalTabId: tab.id,
+		fallbackWindowId: tab.windowId,
+	})
 
 	return fallback
 }
@@ -67,10 +71,52 @@ function unmountWindowBorder(borderId) {
 	document.getElementById(borderId)?.remove()
 }
 
-export async function showWindowBorders(wins) {
-	await clearWindowBorders(wins)
+export async function clearWindowBorders(tabs) {
+	for (const tab of tabs) {
+		if (!tab?.id) continue
+
+		try {
+			await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				func: unmountWindowBorder,
+				args: [WINDOW_BORDER_ID],
+			})
+		} catch {}
+	}
+}
+
+async function openPreviewPage(win, index) {
+	const activeTab = win.tabs.find((tab) => tab.active)
+	if (!activeTab?.id) return null
+
+	const windowColor = getWindowColor(win, index)
+	const params = new URLSearchParams({
+		color: windowColor.accent,
+		label: windowColor.label,
+	})
+
+	const helperTab = await chrome.tabs.create({
+		windowId: win.id,
+		url: `${chrome.runtime.getURL("preview.html")}?${params.toString()}`,
+		active: true,
+	})
+
+	return {
+		windowId: win.id,
+		originalTabId: activeTab.id,
+		helperTabId: helperTab.id,
+	}
+}
+
+export async function showWindowPreviews(wins, currentWindowId) {
+	await clearPreviewArtifacts()
+
+	const entries = []
+	const borderTabIds = []
 
 	for (const [index, win] of wins.entries()) {
+		if (win.id === currentWindowId) continue
+
 		const activeTab = win.tabs.find((tab) => tab.active)
 		if (!activeTab?.id) continue
 
@@ -81,21 +127,30 @@ export async function showWindowBorders(wins) {
 				func: mountWindowBorder,
 				args: [WINDOW_BORDER_ID, windowColor.accent, windowColor.label],
 			})
-		} catch {}
+			borderTabIds.push(activeTab.id)
+		} catch {
+			const entry = await openPreviewPage(win, index)
+			if (entry) entries.push(entry)
+		}
 	}
+
+	await setPreviewSession({ entries, borderTabIds })
 }
 
-export async function clearWindowBorders(wins) {
-	for (const win of wins) {
-		const activeTab = win.tabs.find((tab) => tab.active)
-		if (!activeTab?.id) continue
+export async function clearPreviewArtifacts() {
+	const session = await getPreviewSession()
+
+	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
+
+	for (const entry of session.entries) {
+		try {
+			await chrome.tabs.remove(entry.helperTabId)
+		} catch {}
 
 		try {
-			await chrome.scripting.executeScript({
-				target: { tabId: activeTab.id },
-				func: unmountWindowBorder,
-				args: [WINDOW_BORDER_ID],
-			})
+			await chrome.tabs.update(entry.originalTabId, { active: true })
 		} catch {}
 	}
+
+	await clearPreviewSession()
 }

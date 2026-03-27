@@ -29,6 +29,8 @@ const sharedConfig = {
 async function copyStaticAssets() {
 	await cp("src/manifest.json", "dist/manifest.json")
 	await cp("src/manager.html", "dist/manager.html")
+	await cp("src/preview.html", "dist/preview.html")
+	await cp("src/preview.js", "dist/preview.js")
 	await cp("src/overlay.css", "dist/overlay.css")
 }
 
@@ -39,7 +41,13 @@ async function prepareDist() {
 }
 
 function watchStaticAssets() {
-	const files = ["src/manifest.json", "src/manager.html", "src/overlay.css"]
+	const files = [
+		"src/manifest.json",
+		"src/manager.html",
+		"src/preview.html",
+		"src/preview.js",
+		"src/overlay.css",
+	]
 
 	files.forEach((file) => {
 		watchFs(file, async () => {
