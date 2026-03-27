@@ -22,12 +22,22 @@
 					sans-serif;
 				background:
 					radial-gradient(
-						circle at top,
-						color-mix(in srgb, var(--accent) 24%, transparent),
-						transparent 38%
+						circle at top left,
+						color-mix(in srgb, var(--accent) 46%, transparent),
+						transparent 34%
 					),
-					rgba(27, 25, 27, 0.98);
+					radial-gradient(
+						circle at bottom right,
+						color-mix(in srgb, var(--accent) 28%, transparent),
+						transparent 42%
+					),
+					linear-gradient(
+						135deg,
+						color-mix(in srgb, var(--accent) 14%, rgba(24, 22, 24, 0.92)),
+						rgba(31, 29, 31, 0.96)
+					);
 				color: #f6f0ea;
+				overflow: hidden;
 			}
 
 			.preview {
@@ -38,6 +48,25 @@
 				align-items: flex-start;
 				justify-content: flex-start;
 				padding: 14px;
+				background:
+					linear-gradient(
+						180deg,
+						rgba(255, 255, 255, 0.05),
+						rgba(255, 255, 255, 0.01) 26%,
+						rgba(0, 0, 0, 0.06)
+					),
+					radial-gradient(
+						circle at top left,
+						color-mix(in srgb, var(--accent) 42%, transparent),
+						transparent 36%
+					),
+					linear-gradient(
+						135deg,
+						color-mix(in srgb, var(--accent) 16%, transparent),
+						rgba(0, 0, 0, 0.03)
+					);
+				backdrop-filter: blur(4px) saturate(1.05);
+				box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 			}
 
 			.badge {

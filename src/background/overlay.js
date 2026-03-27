@@ -41,11 +41,29 @@ function mountWindowBorder(borderId, color, label) {
 		"inset:0",
 		"pointer-events:none",
 		"z-index:2147482999",
+		"overflow:hidden",
 		"box-sizing:border-box",
 		`border:3px solid ${color}`,
-		"border-radius:0",
-		"background:transparent",
-		"box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18)",
+		"background:rgba(10,10,12,0.14)",
+		"backdrop-filter:blur(4px) saturate(1.05)",
+		"box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14)",
+	].join(";")
+
+	const wash = document.createElement("div")
+	wash.style.cssText = [
+		"position:absolute",
+		"inset:0",
+		`background:
+			radial-gradient(circle at top left, ${color}96, transparent 34%),
+			radial-gradient(circle at bottom right, ${color}68, transparent 42%),
+			linear-gradient(135deg, ${color}34, rgba(255,255,255,0.04) 42%, rgba(0,0,0,0.05))`,
+	].join(";")
+
+	const veil = document.createElement("div")
+	veil.style.cssText = [
+		"position:absolute",
+		"inset:0",
+		"background:linear-gradient(135deg, rgba(14,14,16,0.03), rgba(14,14,16,0.12))",
 	].join(";")
 
 	const badge = document.createElement("div")
@@ -63,7 +81,7 @@ function mountWindowBorder(borderId, color, label) {
 		"box-shadow:0 1px 0 rgba(255,255,255,0.22)",
 	].join(";")
 
-	border.appendChild(badge)
+	border.append(wash, veil, badge)
 	document.documentElement.appendChild(border)
 }
 
