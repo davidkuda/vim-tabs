@@ -3,88 +3,88 @@ async function inject(tabId) {
 	await chrome.scripting.insertCSS({
 		target: { tabId },
 		files: ["overlay.css"],
-	});
+	})
 	await chrome.scripting.executeScript({
 		target: { tabId },
 		files: ["overlay.js"],
-	});
+	})
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
 	try {
-		await inject(tab.id);
+		await inject(tab.id)
 	} catch (e) {
 		// blocked page → open fallback internal page
 		const fallback = await chrome.tabs.create({
 			url: chrome.runtime.getURL("manager.html"),
 			active: true,
-		});
+		})
 		try {
-			await chrome.storage.local.set({ fallbackId: fallback.id });
+			await chrome.storage.local.set({ fallbackId: fallback.id })
 		} catch {}
 	}
-});
+})
 
 /* -------- Message bus -------- */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (msg.type === "getData") {
-		getData().then(sendResponse);
-		return true; // keep channel open
+		getData().then(sendResponse)
+		return true // keep channel open
 	}
 	if (msg.type === "commit") {
-		handleCommit(msg, sender && sender.tab);
+		handleCommit(msg, sender && sender.tab)
 	}
-});
+})
 
 /* -------- Helpers -------- */
 async function getData() {
-	const wins = await chrome.windows.getAll({ populate: true });
-	let activeSel = { w: 0, t: 0 };
+	const wins = await chrome.windows.getAll({ populate: true })
+	let activeSel = { w: 0, t: 0 }
 	wins.forEach((w, wi) => {
 		w.tabs.forEach((t, ti) => {
-			if (t.active && w.focused) activeSel = { w: wi, t: ti };
-		});
-	});
-	return { wins, activeSel };
+			if (t.active && w.focused) activeSel = { w: wi, t: ti }
+		})
+	})
+	return { wins, activeSel }
 }
 
 async function handleCommit(msg, senderTab) {
-	await applyActions(msg.actions || []);
+	await applyActions(msg.actions || [])
 	if (msg.postFocus) {
 		typeof msg.postFocus === "number"
 			? await focusById(msg.postFocus)
-			: await focusByDescriptor(msg.postFocus);
+			: await focusByDescriptor(msg.postFocus)
 	}
 	// close fallback if needed
 	try {
-		const { fallbackId } = await chrome.storage.local.get("fallbackId");
+		const { fallbackId } = await chrome.storage.local.get("fallbackId")
 		if (fallbackId && senderTab && senderTab.id === fallbackId) {
-			await chrome.tabs.remove(fallbackId);
-			await chrome.storage.local.remove("fallbackId");
+			await chrome.tabs.remove(fallbackId)
+			await chrome.storage.local.remove("fallbackId")
 		}
 	} catch {}
 }
 
 async function focusById(id) {
 	try {
-		const t = await chrome.tabs.get(id);
-		await chrome.windows.update(t.windowId, { focused: true });
-		await chrome.tabs.update(t.id, { active: true });
+		const t = await chrome.tabs.get(id)
+		await chrome.windows.update(t.windowId, { focused: true })
+		await chrome.tabs.update(t.id, { active: true })
 	} catch (e) {
-		console.error("focusById", e);
+		console.error("focusById", e)
 	}
 }
 async function focusByDescriptor(desc) {
 	try {
-		const { windowId, index, url } = desc;
-		const tabs = await chrome.tabs.query({ windowId, url });
-		let t = tabs.find((t) => t.index === index) || tabs[0];
+		const { windowId, index, url } = desc
+		const tabs = await chrome.tabs.query({ windowId, url })
+		let t = tabs.find((t) => t.index === index) || tabs[0]
 		if (t) {
-			await chrome.windows.update(t.windowId, { focused: true });
-			await chrome.tabs.update(t.id, { active: true });
+			await chrome.windows.update(t.windowId, { focused: true })
+			await chrome.tabs.update(t.id, { active: true })
 		}
 	} catch (e) {
-		console.error("focusByDesc", e);
+		console.error("focusByDesc", e)
 	}
 }
 
@@ -93,9 +93,9 @@ async function applyActions(list) {
 		try {
 			switch (a.type) {
 				case "bookmark": {
-					const t = await chrome.tabs.get(a.tabId);
-					await chrome.bookmarks.create({ title: t.title, url: t.url });
-					break;
+					const t = await chrome.tabs.get(a.tabId)
+					await chrome.bookmarks.create({ title: t.title, url: t.url })
+					break
 				}
 				case "create":
 					await chrome.tabs.create({
@@ -103,20 +103,20 @@ async function applyActions(list) {
 						windowId: a.windowId,
 						index: a.index,
 						active: false,
-					});
-					break;
+					})
+					break
 				case "remove":
-					await chrome.tabs.remove(a.tabId);
-					break;
+					await chrome.tabs.remove(a.tabId)
+					break
 				case "move":
 					await chrome.tabs.move(a.tabId, {
 						windowId: a.windowId,
 						index: a.index,
-					});
-					break;
+					})
+					break
 			}
 		} catch (err) {
-			console.error("apply", a, err);
+			console.error("apply", a, err)
 		}
 	}
 }
