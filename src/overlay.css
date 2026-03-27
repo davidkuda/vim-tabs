@@ -45,36 +45,9 @@
 }
 
 #vtm-topbar {
-	display: grid;
-	grid-template-columns: auto 1fr auto;
-	align-items: center;
-	gap: 16px;
-	padding: 0 2px 14px;
-}
-
-.vtm-topbar-mark {
 	display: flex;
-	gap: 8px;
 	align-items: center;
-}
-
-.vtm-dot {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.vtm-dot-rose {
-	background: #d7827e;
-}
-
-.vtm-dot-pine {
-	background: #286983;
-}
-
-.vtm-dot-gold {
-	background: #ea9d34;
+	padding: 0 2px 14px;
 }
 
 .vtm-topbar-title {
@@ -85,12 +58,8 @@
 	color: rgba(246, 240, 234, 0.82);
 }
 
-.vtm-topbar-meta {
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-	color: rgba(246, 240, 234, 0.36);
+.vtm-topbar-title span {
+	color: rgba(246, 240, 234, 0.42);
 }
 
 #vtm-columns {
@@ -113,44 +82,7 @@
 
 #vtm-footer {
 	margin-top: 14px;
-	padding: 12px 14px;
-	display: grid;
-	grid-template-columns: auto 1fr;
-	align-items: center;
-	gap: 14px;
-	border-radius: 18px;
-	background:
-		linear-gradient(135deg, rgba(215, 130, 126, 0.05), rgba(40, 105, 131, 0.05)),
-		rgba(255, 255, 255, 0.018);
-	border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.vtm-footer-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	padding: 6px 9px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.045);
-	border: 1px solid rgba(255, 255, 255, 0.07);
-	white-space: nowrap;
-}
-
-.vtm-footer-chip code {
-	padding: 3px 7px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.08);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	font-size: 12px;
-	color: #f6f0ea;
-}
-
-.vtm-footer-chip span {
-	font-size: 10px;
-	font-weight: 700;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: rgba(246, 240, 234, 0.68);
+	padding: 4px 2px 0;
 }
 
 .vtm-footer-copy {
@@ -356,16 +288,7 @@
 
 @media (max-width: 900px) {
 	#vtm-topbar {
-		grid-template-columns: 1fr;
-		gap: 10px;
-	}
-
-	.vtm-topbar-meta {
-		display: none;
-	}
-
-	#vtm-footer {
-		grid-template-columns: 1fr;
+		padding-bottom: 12px;
 	}
 
 	.vtm-help-groups {

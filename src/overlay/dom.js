@@ -12,13 +12,7 @@ export function createOverlayDom() {
 	const topbar = document.createElement("div")
 	topbar.id = "vtm-topbar"
 	topbar.innerHTML = `
-		<div class="vtm-topbar-mark">
-			<span class="vtm-dot vtm-dot-rose"></span>
-			<span class="vtm-dot vtm-dot-pine"></span>
-			<span class="vtm-dot vtm-dot-gold"></span>
-		</div>
-		<div class="vtm-topbar-title">VimTabs</div>
-		<div class="vtm-topbar-meta">Keyboard Tab Manager</div>
+		<div class="vtm-topbar-title">VimTabs <span>Keyboard Tab Manager</span></div>
 	`
 
 	const columns = document.createElement("div")

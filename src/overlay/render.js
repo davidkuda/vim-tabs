@@ -64,8 +64,7 @@ export function createRenderer(state, columns, footer) {
 
 		highlight()
 		footer.innerHTML = `
-			<div class="vtm-footer-chip"><code>?</code><span>Shortcuts</span></div>
-			<div class="vtm-footer-copy">Navigate with vim keys, stage changes, then press <code>Esc</code> to apply.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Navigate with vim keys, stage changes, then press <code>Esc</code> to apply.</div>
 		`
 	}
 
@@ -133,8 +132,7 @@ export function createRenderer(state, columns, footer) {
 		help.appendChild(groups)
 		columns.appendChild(help)
 		footer.innerHTML = `
-			<div class="vtm-footer-chip"><code>Esc</code><span>Back to Tabs</span></div>
-			<div class="vtm-footer-copy">Return to the overview and keep moving without leaving the keyboard.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> to return to the tabs overview.</div>
 		`
 	}
 
