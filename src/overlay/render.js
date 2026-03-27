@@ -115,7 +115,6 @@ export function createRenderer(state, columns, footer) {
 		const hero = document.createElement("div")
 		hero.className = "vtm-help-hero"
 		hero.innerHTML = `
-			<div class="vtm-help-kicker">VimTabs Cheatsheet</div>
 			<h2 class="vtm-help-title">Move fast across windows and tabs</h2>
 			<p class="vtm-help-copy">Everything here stays keyboard-first. Cut, move, duplicate, bookmark, and focus tabs without leaving the overlay.</p>
 		`
