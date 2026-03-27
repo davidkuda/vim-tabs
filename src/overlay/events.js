@@ -133,6 +133,12 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		})
 	}
 
+	function closeAndSend(message) {
+		detachListeners()
+		backdrop.remove()
+		chrome.runtime.sendMessage(message)
+	}
+
 	function focusTab() {
 		const tab = curTab(state)
 		if (tab._temp) {
@@ -226,6 +232,14 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			actions.markRemove()
 			return
 		}
+		if (event.key === "X") {
+			event.preventDefault()
+			closeAndSend({
+				type: "stashWindow",
+				windowId: state.wins[state.sel.w].id,
+			})
+			return
+		}
 		if (event.key === "u") {
 			event.preventDefault()
 			actions.undoDel()
@@ -247,6 +261,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			return
 		}
 		if (event.key === '"') {
+			event.preventDefault()
+			closeAndSend({ type: "openStash" })
+			return
+		}
+		if (event.key === "b") {
 			event.preventDefault()
 			actions.bookmark()
 			return

@@ -180,9 +180,11 @@ export function createRenderer(state, columns, footer) {
 
 		addGroup("Tab Actions", [
 			["d", "cut tab"],
+			["X", "stash window"],
 			["y", "copy tab"],
 			["p / P", "paste below or above"],
-			['"', "bookmark tab"],
+			['"', "open stash"],
+			["b", "bookmark tab"],
 		])
 
 		addGroup("Session", [

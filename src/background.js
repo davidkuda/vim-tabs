@@ -9,6 +9,7 @@ import {
 	showWindowPreviews,
 } from "./background/overlay.js"
 import { getPreviewSession } from "./background/session.js"
+import { openStashPage, stashWindow } from "./background/stash.js"
 
 async function handleCommit(msg, senderTab) {
 	const session = await getPreviewSession()
@@ -35,10 +36,14 @@ async function handleCommit(msg, senderTab) {
 	} catch {}
 }
 
-chrome.action.onClicked.addListener(async (tab) => {
+async function clearOverlayArtifacts() {
 	const session = await getPreviewSession()
 	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
 	await clearPreviewArtifacts()
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+	await clearOverlayArtifacts()
 
 	const { wins } = await getData()
 	let overlayHostTabId = tab.id
@@ -66,5 +71,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "commit") {
 		handleCommit(msg, sender && sender.tab)
+	}
+
+	if (msg.type === "openStash") {
+		clearOverlayArtifacts().then(() => openStashPage(sender?.tab?.windowId))
+	}
+
+	if (msg.type === "stashWindow") {
+		clearOverlayArtifacts().then(() => stashWindow(msg.windowId, sender?.tab))
 	}
 })
