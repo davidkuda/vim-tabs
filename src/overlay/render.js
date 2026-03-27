@@ -69,32 +69,66 @@ export function createRenderer(state, columns, footer) {
 	function renderHelp() {
 		columns.innerHTML = ""
 
-		const table = document.createElement("table")
-		table.className = "vtm-help"
-		table.innerHTML =
-			"<thead><tr><th>Key</th><th>Action</th></tr></thead><tbody></tbody>"
+		const help = document.createElement("section")
+		help.className = "vtm-help"
 
-		const add = (key, action) => {
-			const row = document.createElement("tr")
-			row.innerHTML = `<td><code>${key}</code></td><td>${action}</td>`
-			table.tBodies[0].appendChild(row)
+		const hero = document.createElement("div")
+		hero.className = "vtm-help-hero"
+		hero.innerHTML = `
+			<div class="vtm-help-kicker">VimTabs Cheatsheet</div>
+			<h2 class="vtm-help-title">Move fast across windows and tabs</h2>
+			<p class="vtm-help-copy">Everything here stays keyboard-first. Cut, move, duplicate, bookmark, and focus tabs without leaving the overlay.</p>
+		`
+		help.appendChild(hero)
+
+		const groups = document.createElement("div")
+		groups.className = "vtm-help-groups"
+
+		const addGroup = (title, items) => {
+			const section = document.createElement("section")
+			section.className = "vtm-help-group"
+
+			const heading = document.createElement("h3")
+			heading.className = "vtm-help-group-title"
+			heading.textContent = title
+			section.appendChild(heading)
+
+			const list = document.createElement("div")
+			list.className = "vtm-help-list"
+
+			items.forEach(([key, action]) => {
+				const row = document.createElement("div")
+				row.className = "vtm-help-row"
+				row.innerHTML = `<code>${key}</code><span>${action}</span>`
+				list.appendChild(row)
+			})
+
+			section.appendChild(list)
+			groups.appendChild(section)
 		}
 
-		;[
-			["j / k", "move down / up"],
-			["h / l", "prev / next column"],
-			["g / G", "top / bottom"],
-			["d", "cut (delete later)"],
-			["y", "yank copy"],
-			["p / P", "paste below / above"],
-			["u", "undo delete"],
-			['"', "bookmark tab"],
-			["Enter", "focus tab"],
-			["Esc", "apply & close"],
-			["?", "toggle help"],
-		].forEach(([key, action]) => add(key, action))
+		addGroup("Navigation", [
+			["j / k", "move down or up"],
+			["h / l", "jump between windows"],
+			["g / G", "go to top or bottom"],
+			["Enter", "focus selected tab"],
+		])
 
-		columns.appendChild(table)
+		addGroup("Tab Actions", [
+			["d", "cut tab"],
+			["y", "copy tab"],
+			["p / P", "paste below or above"],
+			['"', "bookmark tab"],
+		])
+
+		addGroup("Session", [
+			["u", "undo delete"],
+			["?", "toggle this help"],
+			["Esc", "apply changes and close"],
+		])
+
+		help.appendChild(groups)
+		columns.appendChild(help)
 		footer.textContent = "press `?` or ESC to go back to the tabs overview"
 	}
 
