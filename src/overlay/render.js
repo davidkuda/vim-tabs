@@ -216,10 +216,83 @@ export function createRenderer(state, columns, footer) {
 			["Esc", "apply changes and close"],
 		])
 
+		addGroup("Stash", [
+			["X", "stash selected window"],
+			['"', "open stash inside overlay"],
+			["'", "open full stash page"],
+		])
+
 		help.appendChild(groups)
 		columns.appendChild(help)
 		footer.innerHTML = `
 			<div class="vtm-footer-copy">Press <code>?</code> to return to the tabs overview.</div>
+		`
+	}
+
+	function renderStashHelp() {
+		columns.innerHTML = ""
+
+		const help = document.createElement("section")
+		help.className = "vtm-help"
+
+		const hero = document.createElement("div")
+		hero.className = "vtm-help-hero"
+		hero.innerHTML = `
+			<h2 class="vtm-help-title">Browse stashed sessions like tabs</h2>
+			<p class="vtm-help-copy">Each column is one stashed window session. Search, move, and reopen tabs without leaving the keyboard.</p>
+		`
+		help.appendChild(hero)
+
+		const groups = document.createElement("div")
+		groups.className = "vtm-help-groups"
+
+		const addGroup = (title, items) => {
+			const section = document.createElement("section")
+			section.className = "vtm-help-group"
+
+			const heading = document.createElement("h3")
+			heading.className = "vtm-help-group-title"
+			heading.textContent = title
+			section.appendChild(heading)
+
+			const list = document.createElement("div")
+			list.className = "vtm-help-list"
+
+			items.forEach(([key, action]) => {
+				const row = document.createElement("div")
+				row.className = "vtm-help-row"
+				row.innerHTML = `<code>${key}</code><span>${action}</span>`
+				list.appendChild(row)
+			})
+
+			section.appendChild(list)
+			groups.appendChild(section)
+		}
+
+		addGroup("Navigation", [
+			["j / k", "move down or up"],
+			["J / K", "jump 5 tabs down or up"],
+			["h / l", "jump between sessions"],
+			["g / G", "go to top or bottom"],
+		])
+
+		addGroup("Search", [
+			["/ query", "search stashed tabs"],
+			["n / N", "next / previous match"],
+			["Esc", "clear search or leave stash"],
+		])
+
+		addGroup("Open", [
+			["Enter", "open selected tab"],
+			["Shift+Enter", "open in background"],
+			['"', "return to stash"],
+			["'", "open full stash page"],
+		])
+
+		help.appendChild(groups)
+		columns.appendChild(help)
+		footer.innerHTML = `
+			<div class="vtm-footer-copy">Press <code>?</code> to return to the stash.</div>
 		`
 	}
 
@@ -233,7 +306,6 @@ export function createRenderer(state, columns, footer) {
 		topbar.className = "vtm-stash-topbar"
 		topbar.innerHTML = `
 			<div class="vtm-stash-title">VimTabs Stash</div>
-			<div class="vtm-stash-copy">Sessions are stashed windows. Use <code>h</code>/<code>l</code>, <code>j</code>/<code>k</code>, <code>/</code>, <code>n</code>, <code>N</code>, <code>Enter</code>.</div>
 		`
 		stash.appendChild(topbar)
 
@@ -319,7 +391,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page.</div>
 		`
 	}
 
@@ -349,6 +421,10 @@ export function createRenderer(state, columns, footer) {
 		}
 		if (state.view === "help") {
 			renderHelp()
+			return
+		}
+		if (state.view === "stashHelp") {
+			renderStashHelp()
 			return
 		}
 		renderStash()

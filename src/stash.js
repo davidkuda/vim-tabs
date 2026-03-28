@@ -6,6 +6,7 @@
 	const state = {
 		sessions: [],
 		sel: { s: 0, t: 0 },
+		view: "stash",
 		search: {
 			active: false,
 			query: "",
@@ -99,9 +100,13 @@
 		topbar.className = "vtm-stash-topbar"
 		topbar.innerHTML = `
 			<div class="vtm-stash-title">VimTabs Stash</div>
-			<div class="vtm-stash-copy">Use <code>h</code>/<code>l</code>, <code>j</code>/<code>k</code>, <code>/</code>, <code>n</code>, <code>N</code>, <code>Enter</code>.</div>
 		`
 		root.appendChild(topbar)
+
+		if (state.view === "help") {
+			renderHelp()
+			return
+		}
 
 		if (!state.sessions.length) {
 			const empty = document.createElement("div")
@@ -171,12 +176,56 @@
 			const matches = countMatches(state.search.lastQuery)
 			footer.innerHTML = `Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.`
 		} else {
-			footer.innerHTML = `Press <code>/</code> to search stashed tabs.`
+			footer.innerHTML = `Press <code>?</code> for stash help. Press <code>/</code> to search stashed tabs.`
 		}
 		root.appendChild(footer)
 
 		clampSelection()
 		highlight()
+	}
+
+	function renderHelp() {
+		const help = document.createElement("section")
+		help.className = "vtm-stash-help"
+		help.innerHTML = `
+			<div class="vtm-stash-help-hero">
+				<h2 class="vtm-stash-help-title">Browse stashed sessions like tabs</h2>
+				<p class="vtm-stash-help-copy">Each column is one stashed window session. Search, move, and reopen tabs without leaving the keyboard.</p>
+			</div>
+			<div class="vtm-stash-help-groups">
+				<section class="vtm-stash-help-group">
+					<h3 class="vtm-stash-help-group-title">Navigation</h3>
+					<div class="vtm-stash-help-list">
+						<div class="vtm-stash-help-row"><code>j / k</code><span>move down or up</span></div>
+						<div class="vtm-stash-help-row"><code>J / K</code><span>jump 5 tabs down or up</span></div>
+						<div class="vtm-stash-help-row"><code>h / l</code><span>jump between sessions</span></div>
+						<div class="vtm-stash-help-row"><code>g / G</code><span>go to top or bottom</span></div>
+					</div>
+				</section>
+				<section class="vtm-stash-help-group">
+					<h3 class="vtm-stash-help-group-title">Search</h3>
+					<div class="vtm-stash-help-list">
+						<div class="vtm-stash-help-row"><code>/ query</code><span>search stashed tabs</span></div>
+						<div class="vtm-stash-help-row"><code>n / N</code><span>next / previous match</span></div>
+						<div class="vtm-stash-help-row"><code>Esc</code><span>clear search</span></div>
+					</div>
+				</section>
+				<section class="vtm-stash-help-group">
+					<h3 class="vtm-stash-help-group-title">Open</h3>
+					<div class="vtm-stash-help-list">
+						<div class="vtm-stash-help-row"><code>Enter</code><span>open selected tab</span></div>
+						<div class="vtm-stash-help-row"><code>Shift+Enter</code><span>open in background</span></div>
+						<div class="vtm-stash-help-row"><code>?</code><span>return to stash</span></div>
+					</div>
+				</section>
+			</div>
+		`
+		root.appendChild(help)
+
+		const footer = document.createElement("div")
+		footer.className = "vtm-stash-footer"
+		footer.innerHTML = `Press <code>?</code> to return to the stash.`
+		root.appendChild(footer)
 	}
 
 	function startSearch() {
@@ -240,6 +289,11 @@
 		render()
 	}
 
+	function bottom() {
+		const tabs = state.sessions[state.sel.s]?.tabs || []
+		state.sel.t = tabs.length - 1
+	}
+
 	function onKey(event) {
 		if (state.search.active) {
 			if (event.key === "Escape") {
@@ -264,6 +318,15 @@
 			return
 		}
 
+		if (state.view === "help") {
+			if (event.key === "?") {
+				event.preventDefault()
+				state.view = "stash"
+				render()
+			}
+			return
+		}
+
 		if (event.key === "/") {
 			event.preventDefault()
 			startSearch()
@@ -277,6 +340,12 @@
 		if (event.key === "N") {
 			event.preventDefault()
 			jumpSearch(-1)
+			return
+		}
+		if (event.key === "?") {
+			event.preventDefault()
+			state.view = "help"
+			render()
 			return
 		}
 		if (event.key === "Escape") {
@@ -297,6 +366,19 @@
 			render()
 			return
 		}
+		if (event.key === "J") {
+			event.preventDefault()
+			const tabs = state.sessions[state.sel.s]?.tabs || []
+			state.sel.t = Math.min(state.sel.t + 5, tabs.length - 1)
+			render()
+			return
+		}
+		if (event.key === "K") {
+			event.preventDefault()
+			state.sel.t = Math.max(state.sel.t - 5, 0)
+			render()
+			return
+		}
 		if (event.key === "h") {
 			event.preventDefault()
 			state.sel.s = Math.max(state.sel.s - 1, 0)
@@ -311,10 +393,28 @@
 			render()
 			return
 		}
+		if (event.key === "g") {
+			event.preventDefault()
+			state.sel.t = 0
+			render()
+			return
+		}
+		if (event.key === "G") {
+			event.preventDefault()
+			bottom()
+			render()
+			return
+		}
 		if (event.key === "Enter") {
 			event.preventDefault()
 			const tab = currentTab()
-			if (tab?.url) chrome.tabs.create({ url: tab.url, active: true })
+			if (tab?.url) {
+				chrome.runtime.sendMessage({
+					type: "openStashedTab",
+					url: tab.url,
+					background: event.shiftKey,
+				})
+			}
 		}
 	}
 

@@ -177,6 +177,16 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		closeAndSend({ type: "openStashedTab", url: tab.url })
 	}
 
+	function openStashTabInBackground() {
+		const tab = state.stash.sessions[state.stash.sel.s]?.tabs[state.stash.sel.t]
+		if (!tab?.url) return
+		chrome.runtime.sendMessage({
+			type: "openStashedTab",
+			url: tab.url,
+			background: true,
+		})
+	}
+
 	function focusTab() {
 		const tab = curTab(state)
 		if (tab._temp) {
@@ -241,7 +251,22 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			return
 		}
 
+		if (state.view === "stashHelp") {
+			if (event.key === "?") {
+				event.preventDefault()
+				state.view = "stash"
+				render()
+			}
+			return
+		}
+
 		if (state.view === "stash") {
+			if (event.key === "?") {
+				event.preventDefault()
+				state.view = "stashHelp"
+				render()
+				return
+			}
 			if (event.key === '"') {
 				event.preventDefault()
 				toggleStash()
@@ -324,6 +349,10 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			}
 			if (event.key === "Enter") {
 				event.preventDefault()
+				if (event.shiftKey) {
+					openStashTabInBackground()
+					return
+				}
 				openStashTab()
 			}
 			return

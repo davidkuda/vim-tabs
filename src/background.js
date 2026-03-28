@@ -87,7 +87,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		chrome.tabs.create({
 			windowId: sender?.tab?.windowId,
 			url: msg.url,
-			active: true,
+			active: !msg.background,
 		})
 	}
 
