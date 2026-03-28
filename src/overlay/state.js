@@ -2,6 +2,10 @@ export function createState() {
 	return {
 		wins: [],
 		sel: { w: 0, t: 0 },
+		stash: {
+			sessions: [],
+			sel: { s: 0, t: 0 },
+		},
 		yank: null,
 		queue: [],
 		view: "tabs",

@@ -7,6 +7,16 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		const needle = query.toLowerCase()
 		const matches = []
 
+		if (state.view === "stash") {
+			state.stash.sessions.forEach((session, si) => {
+				session.tabs.forEach((tab, ti) => {
+					const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
+					if (haystack.includes(needle)) matches.push({ s: si, t: ti })
+				})
+			})
+			return matches
+		}
+
 		state.wins.forEach((win, wi) => {
 			win.tabs.forEach((tab, ti) => {
 				const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
@@ -20,6 +30,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	function selectMatch(matches, index) {
 		if (!matches.length) return
 		const next = matches[((index % matches.length) + matches.length) % matches.length]
+		if (state.view === "stash") {
+			state.stash.sel.s = next.s
+			state.stash.sel.t = next.t
+			return
+		}
 		state.sel.w = next.w
 		state.sel.t = next.t
 	}
@@ -83,6 +98,9 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		if (!matches.length) return
 
 		const currentIndex = matches.findIndex((match) => {
+			if (state.view === "stash") {
+				return match.s === state.stash.sel.s && match.t === state.stash.sel.t
+			}
 			return match.w === state.sel.w && match.t === state.sel.t
 		})
 
@@ -116,7 +134,21 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	}
 
 	function bottom() {
+		if (state.view === "stash") {
+			const tabs = state.stash.sessions[state.stash.sel.s]?.tabs || []
+			state.stash.sel.t = tabs.length - 1
+			return
+		}
 		state.sel.t = state.wins[state.sel.w].tabs.length - 1
+	}
+
+	function clampStashSelection() {
+		state.stash.sel.s = Math.max(
+			0,
+			Math.min(state.stash.sel.s, state.stash.sessions.length - 1),
+		)
+		const tabs = state.stash.sessions[state.stash.sel.s]?.tabs || []
+		state.stash.sel.t = Math.max(0, Math.min(state.stash.sel.t, tabs.length - 1))
 	}
 
 	function detachListeners() {
@@ -139,6 +171,12 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		chrome.runtime.sendMessage(message)
 	}
 
+	function openStashTab() {
+		const tab = state.stash.sessions[state.stash.sel.s]?.tabs[state.stash.sel.t]
+		if (!tab?.url) return
+		closeAndSend({ type: "openStashedTab", url: tab.url })
+	}
+
 	function focusTab() {
 		const tab = curTab(state)
 		if (tab._temp) {
@@ -155,6 +193,20 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	function toggleHelp() {
 		state.view = state.view === "tabs" ? "help" : "tabs"
 		render()
+	}
+
+	function toggleStash() {
+		if (state.view === "stash") {
+			state.view = "tabs"
+			render()
+			return
+		}
+		chrome.runtime.sendMessage({ type: "getStashData" }, (stashData) => {
+			state.stash.sessions = stashData.sessions || []
+			clampStashSelection()
+			state.view = "stash"
+			render()
+		})
 	}
 
 	function onKey(event) {
@@ -185,6 +237,94 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			if (event.key === "?") {
 				event.preventDefault()
 				toggleHelp()
+			}
+			return
+		}
+
+		if (state.view === "stash") {
+			if (event.key === '"') {
+				event.preventDefault()
+				toggleStash()
+				return
+			}
+			if (event.key === "'") {
+				event.preventDefault()
+				closeAndSend({ type: "openStash" })
+				return
+			}
+			if (event.key === "G") {
+				event.preventDefault()
+				bottom()
+				render()
+				return
+			}
+			if (event.key === "Escape") {
+				event.preventDefault()
+				if (clearSearch()) return
+				toggleStash()
+				return
+			}
+			if (event.key === "/") {
+				event.preventDefault()
+				startSearch()
+				return
+			}
+			if (event.key === "n") {
+				event.preventDefault()
+				jumpSearch(1)
+				return
+			}
+			if (event.key === "N") {
+				event.preventDefault()
+				jumpSearch(-1)
+				return
+			}
+			if (event.key === "j") {
+				event.preventDefault()
+				const tabs = state.stash.sessions[state.stash.sel.s]?.tabs || []
+				state.stash.sel.t = Math.min(state.stash.sel.t + 1, tabs.length - 1)
+				render()
+				return
+			}
+			if (event.key === "k") {
+				event.preventDefault()
+				state.stash.sel.t = Math.max(state.stash.sel.t - 1, 0)
+				render()
+				return
+			}
+			if (event.key === "J") {
+				event.preventDefault()
+				const tabs = state.stash.sessions[state.stash.sel.s]?.tabs || []
+				state.stash.sel.t = Math.min(state.stash.sel.t + 5, tabs.length - 1)
+				render()
+				return
+			}
+			if (event.key === "K") {
+				event.preventDefault()
+				state.stash.sel.t = Math.max(state.stash.sel.t - 5, 0)
+				render()
+				return
+			}
+			if (event.key === "h") {
+				event.preventDefault()
+				state.stash.sel.s = Math.max(state.stash.sel.s - 1, 0)
+				clampStashSelection()
+				render()
+				return
+			}
+			if (event.key === "l") {
+				event.preventDefault()
+				state.stash.sel.s = Math.min(
+					state.stash.sel.s + 1,
+					state.stash.sessions.length - 1,
+				)
+				clampStashSelection()
+				render()
+				return
+			}
+			if (event.key === "Enter") {
+				event.preventDefault()
+				openStashTab()
 			}
 			return
 		}
@@ -261,6 +401,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			return
 		}
 		if (event.key === '"') {
+			event.preventDefault()
+			toggleStash()
+			return
+		}
+		if (event.key === "'") {
 			event.preventDefault()
 			closeAndSend({ type: "openStash" })
 			return

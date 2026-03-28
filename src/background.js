@@ -10,6 +10,7 @@ import {
 } from "./background/overlay.js"
 import { getPreviewSession } from "./background/session.js"
 import { openStashPage, stashWindow } from "./background/stash.js"
+import { getStashData } from "./shared/stash.js"
 
 async function handleCommit(msg, senderTab) {
 	const session = await getPreviewSession()
@@ -69,12 +70,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		return true
 	}
 
+	if (msg.type === "getStashData") {
+		getStashData().then(sendResponse)
+		return true
+	}
+
 	if (msg.type === "commit") {
 		handleCommit(msg, sender && sender.tab)
 	}
 
 	if (msg.type === "openStash") {
 		clearOverlayArtifacts().then(() => openStashPage(sender?.tab?.windowId))
+	}
+
+	if (msg.type === "openStashedTab") {
+		chrome.tabs.create({
+			windowId: sender?.tab?.windowId,
+			url: msg.url,
+			active: true,
+		})
 	}
 
 	if (msg.type === "stashWindow") {

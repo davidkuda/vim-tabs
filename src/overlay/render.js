@@ -1,6 +1,26 @@
 import { getWindowColor } from "../shared/window-colors.js"
 
 export function createRenderer(state, columns, footer) {
+	function formatUrl(url) {
+		if (!url) return ""
+		try {
+			const parsed = new URL(url)
+			const host = parsed.host.replace(/^www\./, "")
+			const path = `${parsed.pathname}${parsed.search}` || "/"
+			const compactPath = path.length > 36 ? `${path.slice(0, 33)}...` : path
+			return `${host}${compactPath === "/" ? "" : compactPath}`
+		} catch {
+			return url.length > 52 ? `${url.slice(0, 49)}...` : url
+		}
+	}
+
+	function formatSessionDate(createdAt) {
+		return new Intl.DateTimeFormat(undefined, {
+			dateStyle: "medium",
+			timeStyle: "short",
+		}).format(createdAt)
+	}
+
 	function matchesTab(tab, query) {
 		if (!query) return false
 		const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
@@ -44,19 +64,6 @@ export function createRenderer(state, columns, footer) {
 		return card
 	}
 
-	function formatUrl(url) {
-		if (!url) return ""
-		try {
-			const parsed = new URL(url)
-			const host = parsed.host.replace(/^www\./, "")
-			const path = `${parsed.pathname}${parsed.search}` || "/"
-			const compactPath = path.length > 36 ? `${path.slice(0, 33)}...` : path
-			return `${host}${compactPath === "/" ? "" : compactPath}`
-		} catch {
-			return url.length > 52 ? `${url.slice(0, 49)}...` : url
-		}
-	}
-
 	function highlight() {
 		document
 			.querySelectorAll(".vtm-card.vtm-selected")
@@ -64,6 +71,21 @@ export function createRenderer(state, columns, footer) {
 
 		const current = document.querySelector(
 			`.vtm-card[data-w="${state.sel.w}"][data-t="${state.sel.t}"]`,
+		)
+
+		if (current) {
+			current.classList.add("vtm-selected")
+			current.scrollIntoView({ block: "nearest", inline: "nearest" })
+		}
+	}
+
+	function highlightStash() {
+		document
+			.querySelectorAll(".vtm-stash-tab.vtm-selected")
+			.forEach((node) => node.classList.remove("vtm-selected"))
+
+		const current = document.querySelector(
+			`.vtm-stash-tab[data-s="${state.stash.sel.s}"][data-t="${state.stash.sel.t}"]`,
 		)
 
 		if (current) {
@@ -183,7 +205,8 @@ export function createRenderer(state, columns, footer) {
 			["X", "stash window"],
 			["y", "copy tab"],
 			["p / P", "paste below or above"],
-			['"', "open stash"],
+			['"', "stash in overlay"],
+			["'", "open stash page"],
 			["b", "bookmark tab"],
 		])
 
@@ -200,8 +223,135 @@ export function createRenderer(state, columns, footer) {
 		`
 	}
 
+	function renderStash() {
+		columns.innerHTML = ""
+
+		const stash = document.createElement("section")
+		stash.className = "vtm-stash"
+
+		const topbar = document.createElement("div")
+		topbar.className = "vtm-stash-topbar"
+		topbar.innerHTML = `
+			<div class="vtm-stash-title">VimTabs Stash</div>
+			<div class="vtm-stash-copy">Sessions are stashed windows. Use <code>h</code>/<code>l</code>, <code>j</code>/<code>k</code>, <code>/</code>, <code>n</code>, <code>N</code>, <code>Enter</code>.</div>
+		`
+		stash.appendChild(topbar)
+
+		if (!state.stash.sessions.length) {
+			const empty = document.createElement("div")
+			empty.className = "vtm-stash-empty"
+			empty.textContent = "No stashed tabs yet."
+			stash.appendChild(empty)
+			columns.appendChild(stash)
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Press <code>"</code> to return to the tabs overview.</div>
+			`
+			return
+		}
+
+		const sessions = document.createElement("div")
+		sessions.className = "vtm-stash-columns"
+
+		state.stash.sessions.forEach((session, si) => {
+			const column = document.createElement("section")
+			column.className = "vtm-stash-session"
+
+			const head = document.createElement("div")
+			head.className = "vtm-stash-session-head"
+			head.innerHTML = `
+				<div class="vtm-stash-date">${formatSessionDate(session.createdAt)}</div>
+				<div class="vtm-stash-meta">${session.tabs.length} tab${session.tabs.length === 1 ? "" : "s"}</div>
+			`
+			column.appendChild(head)
+
+			session.tabs.forEach((tab, ti) => {
+				const item = document.createElement("div")
+				item.className = "vtm-stash-tab"
+				item.dataset.s = si
+				item.dataset.t = ti
+				if (
+					matchesTab(
+						tab,
+						state.search.active ? state.search.query : state.search.lastQuery,
+					)
+				) {
+					item.classList.add("vtm-match")
+				}
+
+				if (tab.favIconUrl && !tab.favIconUrl.startsWith("chrome://")) {
+					const img = document.createElement("img")
+					img.className = "vtm-stash-favicon"
+					img.src = tab.favIconUrl
+					item.appendChild(img)
+				}
+
+				const meta = document.createElement("div")
+				meta.className = "vtm-stash-meta-block"
+				meta.innerHTML = `
+					<div class="vtm-stash-tab-title">${tab.title}</div>
+					<div class="vtm-stash-tab-url">${formatUrl(tab.url)}</div>
+				`
+				item.appendChild(meta)
+				column.appendChild(item)
+			})
+
+			sessions.appendChild(column)
+		})
+
+		stash.appendChild(sessions)
+		columns.appendChild(stash)
+		highlightStash()
+
+		if (state.search.active) {
+			const matches = countMatches(state.search.query)
+			footer.innerHTML = `
+				<div class="vtm-footer-copy"><code>/</code>${state.search.query || ""}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
+			`
+			return
+		}
+
+		if (state.search.lastQuery) {
+			const matches = countMatches(state.search.lastQuery)
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
+			`
+			return
+		}
+
+		footer.innerHTML = `
+			<div class="vtm-footer-copy">Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page.</div>
+		`
+	}
+
+	function countMatches(query) {
+		if (!query) return 0
+		let count = 0
+		if (state.view === "stash") {
+			state.stash.sessions.forEach((session) => {
+				session.tabs.forEach((tab) => {
+					if (matchesTab(tab, query)) count++
+				})
+			})
+			return count
+		}
+		state.wins.forEach((win) => {
+			win.tabs.forEach((tab) => {
+				if (matchesTab(tab, query)) count++
+			})
+		})
+		return count
+	}
+
 	function render() {
-		state.view === "tabs" ? renderTabs() : renderHelp()
+		if (state.view === "tabs") {
+			renderTabs()
+			return
+		}
+		if (state.view === "help") {
+			renderHelp()
+			return
+		}
+		renderStash()
 	}
 
 	return {
