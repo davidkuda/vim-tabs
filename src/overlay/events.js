@@ -247,6 +247,12 @@ export function createEventHandlers({
 		render()
 	}
 
+	function scrollHelp(amount) {
+		const help = document.querySelector(".vtm-help")
+		if (!help) return
+		help.scrollBy({ top: amount, behavior: "smooth" })
+	}
+
 	function toggleStash() {
 		if (state.view === "stash") {
 			state.view = "tabs"
@@ -409,6 +415,26 @@ export function createEventHandlers({
 				openSettings("help")
 				return
 			}
+			if (event.key === "j") {
+				event.preventDefault()
+				scrollHelp(120)
+				return
+			}
+			if (event.key === "k") {
+				event.preventDefault()
+				scrollHelp(-120)
+				return
+			}
+			if (event.key === "J") {
+				event.preventDefault()
+				scrollHelp(320)
+				return
+			}
+			if (event.key === "K") {
+				event.preventDefault()
+				scrollHelp(-320)
+				return
+			}
 			if (event.key === "?") {
 				event.preventDefault()
 				toggleHelp()
@@ -420,6 +446,26 @@ export function createEventHandlers({
 			if (event.key === ":") {
 				event.preventDefault()
 				openSettings("stashHelp")
+				return
+			}
+			if (event.key === "j") {
+				event.preventDefault()
+				scrollHelp(120)
+				return
+			}
+			if (event.key === "k") {
+				event.preventDefault()
+				scrollHelp(-120)
+				return
+			}
+			if (event.key === "J") {
+				event.preventDefault()
+				scrollHelp(320)
+				return
+			}
+			if (event.key === "K") {
+				event.preventDefault()
+				scrollHelp(-320)
 				return
 			}
 			if (event.key === "?") {

@@ -257,6 +257,8 @@
 	flex-direction: column;
 	gap: 18px;
 	padding: 6px 2px 2px;
+	overflow-y: auto;
+	padding-right: 8px;
 }
 
 .vtm-help-hero {
@@ -346,6 +348,18 @@
 	font-size: 13px;
 	line-height: 1.4;
 	color: var(--vtm-text-primary);
+}
+
+.vtm-help-explainer {
+	padding: 4px 2px 2px;
+}
+
+.vtm-help-explainer p {
+	margin: 0;
+	max-width: 68ch;
+	font-size: 14px;
+	line-height: 1.65;
+	color: var(--vtm-text-muted);
 }
 
 .vtm-settings-view {

@@ -263,44 +263,48 @@ export function createRenderer(state, columns, footer) {
 			groups.appendChild(section)
 		}
 
-		addGroup("Navigation", [
-			["j / k", "move down or up"],
-			["J / K", "jump 5 tabs down or up"],
-			["h / l", "jump between windows"],
-			["g / G", "go to top or bottom"],
-			["/ query", "search tabs"],
-			["n / N", "next / previous match"],
-			["Enter", "focus selected tab"],
+		addGroup("Move", [
+			["j / k", "move through tabs"],
+			["J / K", "jump 5 tabs"],
+			["h / l", "move between windows"],
+			["g / G", "jump to top or bottom"],
+			["Enter", "focus the selected tab"],
 		])
 
-		addGroup("Tab Actions", [
+		addGroup("Find", [
+			["/ query", "search titles and URLs"],
+			["n / N", "jump between matches"],
+			["?", "open or close help"],
+			[":", "open settings"],
+		])
+
+		addGroup("Shape", [
 			["d", "cut tab"],
-			["X", "stash window"],
 			["y", "copy tab"],
 			["p / P", "paste below or above"],
-			['"', "stash in overlay"],
-			["'", "open stash page"],
+			["u", "undo delete"],
 			["b", "bookmark tab"],
 		])
 
-		addGroup("Session", [
-			["u", "undo delete"],
-			[":", "open settings"],
-			["?", "toggle this help"],
+		addGroup("Stash", [
+			["X", "stash the current window"],
+			['"', "browse the stash in overlay"],
+			["'", "open the full stash page"],
 			["Esc", "apply changes and close"],
 		])
 
-		addGroup("Stash", [
-			["X", "stash selected window"],
-			['"', "open stash inside overlay"],
-			["'", "open full stash page"],
-			[":", "open settings"],
-		])
-
 		help.appendChild(groups)
+
+		const explainer = document.createElement("div")
+		explainer.className = "vtm-help-explainer"
+		explainer.innerHTML = `
+			<p>VimTabs is a keyboard-first tab manager for moving across windows, reshaping tab order, and stashing whole browsing sessions without leaving the current page. The overlay lets you inspect everything at once, make a batch of changes, and apply them only when you close it.</p>
+		`
+		help.appendChild(explainer)
+
 		columns.appendChild(help)
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> to return to the tabs overview.</div>
+			<div class="vtm-footer-copy">Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the tabs overview.</div>
 		`
 	}
 
@@ -368,7 +372,7 @@ export function createRenderer(state, columns, footer) {
 		help.appendChild(groups)
 		columns.appendChild(help)
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> to return to the stash.</div>
+			<div class="vtm-footer-copy">Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the stash.</div>
 		`
 	}
 
