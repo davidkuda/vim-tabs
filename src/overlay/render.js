@@ -80,6 +80,17 @@ export function createRenderer(state, columns, footer) {
 		]
 	}
 
+	function getStashCounts(sessions) {
+		const counts = new Map()
+		sessions.forEach((session) => {
+			session.tabs.forEach((tab) => {
+				if (!tab.url) return
+				counts.set(tab.url, (counts.get(tab.url) || 0) + 1)
+			})
+		})
+		return counts
+	}
+
 	function escapeHtml(text) {
 		return `${text || ""}`
 			.replaceAll("&", "&amp;")
@@ -315,21 +326,14 @@ export function createRenderer(state, columns, footer) {
 	function renderHelp() {
 		columns.innerHTML = ""
 
-		const help = document.createElement("section")
-		help.className = "vtm-help"
+		const helpTabs = [
+			{ id: "general", label: "General" },
+			{ id: "tabs", label: "Tabs" },
+			{ id: "stash", label: "Stash" },
+			{ id: "marks", label: "Marks" },
+		]
 
-		const hero = document.createElement("div")
-		hero.className = "vtm-help-hero"
-		hero.innerHTML = `
-			<h2 class="vtm-help-title">Help</h2>
-			<p class="vtm-help-copy">VimTabs has four overlay views: tabs, stash, marks, and settings. The same navigation strip is available throughout the overlay.</p>
-		`
-		help.appendChild(hero)
-
-		const groups = document.createElement("div")
-		groups.className = "vtm-help-groups"
-
-		const addGroup = (title, items) => {
+		const addGroup = (container, title, items) => {
 			const section = document.createElement("section")
 			section.className = "vtm-help-group"
 
@@ -349,66 +353,120 @@ export function createRenderer(state, columns, footer) {
 			})
 
 			section.appendChild(list)
-			groups.appendChild(section)
+			container.appendChild(section)
 		}
 
-		addGroup("Tabs", [
-			["j / k", "move through tabs"],
-			["J / K", "jump 5 tabs"],
-			["h / l", "move between windows"],
-			["g / G", "jump to top or bottom"],
-			["Enter", "focus the selected tab"],
-			["/ query", "search titles and URLs"],
-			["n / N", "jump between matches"],
-			["d", "queue the selected tab for deletion"],
-			["u", "undo the most recent queued delete"],
-			["y", "yank the selected tab into a temporary register"],
-			["p / P", "paste below or above"],
-			["b", "bookmark tab"],
-			["m letter", "mark the selected tab"],
-			["' letter", "jump to a mark"],
-		])
+		const help = document.createElement("section")
+		help.className = "vtm-help"
 
-		addGroup("Stash", [
-			['"', "open stash inside the overlay"],
-			["X", "stash the current window"],
-			[";", "open the standalone stash page"],
-			["j / k", "move through stashed tabs"],
-			["h / l", "move between stashed sessions"],
-			["Enter", "open the selected stashed tab"],
-			["Shift+Enter", "open in background"],
-		])
+		const tabbar = document.createElement("div")
+		tabbar.className = "vtm-help-tabs"
+		helpTabs.forEach((tab) => {
+			const item = document.createElement("div")
+			item.className = `vtm-help-tab${state.helpTab === tab.id ? " vtm-active" : ""}`
+			item.textContent = tab.label
+			tabbar.appendChild(item)
+		})
+		help.appendChild(tabbar)
 
-		addGroup("Marks", [
-			["M", "open marks inside the overlay"],
-			["j / k", "move within the current marks column"],
-			["h / l", "move between temporary and persistent marks"],
-			["' letter", "jump directly to a mark"],
-			["d", "remove the selected mark"],
-		])
-
-		addGroup("Settings And Global", [
-			[":", "open settings"],
-			["?", "open or close help"],
-			["ESC", "exit the current overlay view"],
-		])
-
-		help.appendChild(groups)
-
+		const hero = document.createElement("div")
+		hero.className = "vtm-help-hero"
 		const explainer = document.createElement("div")
 		explainer.className = "vtm-help-explainer"
-		explainer.innerHTML = `
-			<p><strong>Queued deletes:</strong> pressing <code>d</code> does not close the tab immediately. It marks that tab for deletion inside the overlay. The actual close happens when you leave the overlay with <code>Esc</code> or open a tab with <code>Enter</code>. Use <code>u</code> if you want to undo the most recent queued delete before applying.</p>
-			<p><strong>Yank and paste:</strong> pressing <code>y</code> stores the selected tab as a temporary entry. Use <code>p</code> or <code>P</code> to insert a copy of that tab below or above the current position, including into another window column.</p>
-			<p><strong>Marks:</strong> pressing <code>m</code> followed by a letter assigns that letter to the selected tab. Press <code>'</code> followed by the same letter to jump back to it. Uppercase marks persist and can reopen a tab by URL if the original tab no longer exists.</p>
-			<p><strong>Stashing:</strong> pressing <code>X</code> stores all tabs from the current window as one stashed session and closes them from that window. The stash is meant for sessions you want to get out of the way without losing. Use <code>"</code> to inspect the stash inside the overlay or <code>;</code> to open the standalone stash page.</p>
-			<p><strong>Apply model:</strong> most structural changes in the tabs overview are staged first. This lets you inspect the result before committing it. Focusing a tab with <code>Enter</code> or leaving with <code>Esc</code> applies the queued changes.</p>
-		`
-		help.appendChild(explainer)
+
+		const groups = document.createElement("div")
+		groups.className = "vtm-help-groups"
+
+		if (state.helpTab === "general") {
+			hero.innerHTML = `
+				<h2 class="vtm-help-title">General</h2>
+				<p class="vtm-help-copy">VimTabs is a keyboard-first tab manager. The overlay has four views: tabs, stash, marks, and settings. Use the footer navigation from any overlay view.</p>
+			`
+			explainer.innerHTML = `
+				<p><strong>Apply model:</strong> most structural changes in the tabs overview are staged first. This lets you inspect the result before committing it. Focusing a tab with <code>Enter</code> or leaving with <code>Esc</code> applies the queued changes.</p>
+				<p><strong>Queued deletes:</strong> pressing <code>d</code> does not close the tab immediately. It marks that tab for deletion inside the overlay. Use <code>u</code> if you want to undo the most recent queued delete before applying.</p>
+				<p><strong>Yank and paste:</strong> pressing <code>y</code> stores the selected tab as a temporary entry. Use <code>p</code> or <code>P</code> to insert a copy of that tab below or above the current position, including into another window column.</p>
+				<p><strong>Global navigation:</strong> press <code>?</code> for help, <code>:</code> for settings, <code>"</code> for stash, <code>M</code> for marks, and <code>Esc</code> to leave the current overlay view.</p>
+			`
+		}
+
+		if (state.helpTab === "tabs") {
+			hero.innerHTML = `
+				<h2 class="vtm-help-title">Tabs</h2>
+				<p class="vtm-help-copy">The tabs view shows each browser window as a column. This is where you move tabs, queue deletions, copy tabs, bookmark them, and create marks.</p>
+			`
+			addGroup(groups, "Navigation", [
+				["j / k", "move through tabs"],
+				["J / K", "jump 5 tabs"],
+				["h / l", "move between windows"],
+				["g / G", "jump to top or bottom"],
+				["Enter", "focus the selected tab"],
+			])
+			addGroup(groups, "Search And Edit", [
+				["/ query", "search titles and URLs"],
+				["n / N", "jump between matches"],
+				["d", "queue the selected tab for deletion"],
+				["u", "undo the most recent queued delete"],
+				["y", "yank the selected tab"],
+				["p / P", "paste below or above"],
+				["b", "bookmark tab"],
+				["e", "exclude the selected tab hostname"],
+			])
+			addGroup(groups, "Marks", [
+				["m letter", "mark the selected tab"],
+				["' letter", "jump to a mark"],
+			])
+			explainer.innerHTML = `
+				<p><strong>Marks:</strong> pressing <code>m</code> followed by a letter assigns that letter to the selected tab. Press <code>'</code> followed by the same letter to jump back to it. Uppercase marks persist and can reopen a tab by URL if the original tab no longer exists.</p>
+			`
+		}
+
+		if (state.helpTab === "stash") {
+			hero.innerHTML = `
+				<h2 class="vtm-help-title">Stash</h2>
+				<p class="vtm-help-copy">A stash session is a saved window. Stashing stores the tabs from one window together so that window can be cleared without losing those tabs.</p>
+			`
+			addGroup(groups, "Open And Navigate", [
+				['"', "open stash inside the overlay"],
+				["X", "stash the current window"],
+				[";", "open the standalone stash page"],
+				["j / k", "move through stashed tabs"],
+				["h / l", "move between stashed sessions"],
+				["Enter", "open the selected stashed tab"],
+				["Shift+Enter", "open in background"],
+			])
+			addGroup(groups, "Search", [
+				["/ query", "search stashed tabs"],
+				["n / N", "jump between matches"],
+			])
+			explainer.innerHTML = `
+				<p><strong>Stashing:</strong> pressing <code>X</code> stores all tabs from the current window as one stashed session and closes them from that window. The stash is for sessions you want to get out of the way without losing.</p>
+			`
+		}
+
+		if (state.helpTab === "marks") {
+			hero.innerHTML = `
+				<h2 class="vtm-help-title">Marks</h2>
+				<p class="vtm-help-copy">Marks give tabs short names so you can jump back to them quickly. Lowercase marks are for live tabs. Uppercase marks persist.</p>
+			`
+			addGroup(groups, "Using Marks", [
+				["M", "open marks inside the overlay"],
+				["j / k", "move within the current marks column"],
+				["h / l", "move between temporary and persistent marks"],
+				["' letter", "jump directly to a mark"],
+				["d", "remove the selected mark"],
+			])
+			explainer.innerHTML = `
+				<p><strong>Temporary marks:</strong> lowercase marks point to currently open tabs.</p>
+				<p><strong>Persistent marks:</strong> uppercase marks stay available and can reopen a tab by URL if the original tab no longer exists.</p>
+			`
+		}
+
+		help.append(hero, groups, explainer)
 
 		columns.appendChild(help)
 		footer.innerHTML = `
-			${renderFooterNav("help", "Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the previous view.")}
+			${renderFooterNav("help", "Press <code>h</code> and <code>l</code> to switch help tabs. Press <code>j</code> and <code>k</code> to scroll. Press <code>?</code> to return to the previous view.")}
 		`
 	}
 
@@ -439,6 +497,7 @@ export function createRenderer(state, columns, footer) {
 
 		const sessions = document.createElement("div")
 		sessions.className = "vtm-stash-columns"
+		const stashCounts = getStashCounts(state.stash.sessions)
 
 		state.stash.sessions.forEach((session, si) => {
 			const column = document.createElement("section")
@@ -475,10 +534,27 @@ export function createRenderer(state, columns, footer) {
 
 				const meta = document.createElement("div")
 				meta.className = "vtm-stash-meta-block"
-				meta.innerHTML = `
-					<div class="vtm-stash-tab-title">${tab.title}</div>
-					<div class="vtm-stash-tab-url">${formatUrl(tab.url)}</div>
-				`
+				const titleRow = document.createElement("div")
+				titleRow.className = "vtm-stash-title-row"
+
+				const title = document.createElement("div")
+				title.className = "vtm-stash-tab-title"
+				title.textContent = tab.title
+				titleRow.appendChild(title)
+
+				const duplicateCount = stashCounts.get(tab.url) || 0
+				if (duplicateCount > 1) {
+					const badge = document.createElement("span")
+					badge.className = "vtm-stash-count"
+					badge.textContent = `${duplicateCount}x`
+					titleRow.appendChild(badge)
+				}
+
+				const url = document.createElement("div")
+				url.className = "vtm-stash-tab-url"
+				url.textContent = formatUrl(tab.url)
+
+				meta.append(titleRow, url)
 				item.appendChild(meta)
 				column.appendChild(item)
 			})

@@ -229,6 +229,29 @@ export function createEventHandlers({
 		})
 	}
 
+	async function excludeCurrentTabHostname() {
+		const tab = currentLiveTab()
+		if (!tab?.url) return
+
+		const domain = normalizeDomain(tab.url)
+		if (!domain) {
+			state.settings.status = "Could not extract a hostname from the selected tab."
+			renderTabs()
+			return
+		}
+
+		if (state.settings.excludedDomains.includes(domain)) {
+			state.settings.status = `${domain} is already excluded.`
+			renderTabs()
+			return
+		}
+
+		state.settings.excludedDomains = [...state.settings.excludedDomains, domain]
+		await persistSettings()
+		state.settings.status = `Added ${domain} to excluded hostnames.`
+		renderTabs()
+	}
+
 	function resetSettingsStatus() {
 		state.settings.status = ""
 	}
@@ -332,6 +355,10 @@ export function createEventHandlers({
 			state.view = state.helpReturnView || "tabs"
 		} else {
 			state.helpReturnView = state.view
+			if (state.view === "stash") state.helpTab = "stash"
+			else if (state.view === "marks") state.helpTab = "marks"
+			else if (state.view === "tabs") state.helpTab = "tabs"
+			else state.helpTab = "general"
 			state.view = "help"
 		}
 		render()
@@ -561,6 +588,20 @@ export function createEventHandlers({
 
 		if (state.view === "help") {
 			clearMarksStatus()
+			const helpTabs = ["general", "tabs", "stash", "marks"]
+			const helpIndex = helpTabs.indexOf(state.helpTab)
+			if (event.key === "h") {
+				event.preventDefault()
+				state.helpTab = helpTabs[Math.max(helpIndex - 1, 0)]
+				render()
+				return
+			}
+			if (event.key === "l") {
+				event.preventDefault()
+				state.helpTab = helpTabs[Math.min(helpIndex + 1, helpTabs.length - 1)]
+				render()
+				return
+			}
 			if (event.key === "j") {
 				event.preventDefault()
 				scrollHelp(120)
@@ -944,6 +985,12 @@ export function createEventHandlers({
 			event.preventDefault()
 			clearMarksStatus()
 			actions.bookmark()
+			return
+		}
+		if (event.key === "e") {
+			event.preventDefault()
+			clearMarksStatus()
+			excludeCurrentTabHostname()
 			return
 		}
 		if (event.key === "m") {

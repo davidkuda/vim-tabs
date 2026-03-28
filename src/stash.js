@@ -39,6 +39,17 @@
 		return state.sessions[state.sel.s]?.tabs[state.sel.t]
 	}
 
+	function getStashCounts() {
+		const counts = new Map()
+		state.sessions.forEach((session) => {
+			session.tabs.forEach((tab) => {
+				if (!tab.url) return
+				counts.set(tab.url, (counts.get(tab.url) || 0) + 1)
+			})
+		})
+		return counts
+	}
+
 	function matchesTab(tab, query) {
 		if (!query) return false
 		const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
@@ -118,6 +129,7 @@
 
 		const columns = document.createElement("div")
 		columns.className = "vtm-stash-columns"
+		const stashCounts = getStashCounts()
 
 		state.sessions.forEach((session, si) => {
 			const column = document.createElement("section")
@@ -154,10 +166,27 @@
 
 				const meta = document.createElement("div")
 				meta.className = "vtm-stash-meta-block"
-				meta.innerHTML = `
-					<div class="vtm-stash-tab-title">${tab.title}</div>
-					<div class="vtm-stash-tab-url">${formatUrl(tab.url)}</div>
-				`
+				const titleRow = document.createElement("div")
+				titleRow.className = "vtm-stash-title-row"
+
+				const title = document.createElement("div")
+				title.className = "vtm-stash-tab-title"
+				title.textContent = tab.title
+				titleRow.appendChild(title)
+
+				const duplicateCount = stashCounts.get(tab.url) || 0
+				if (duplicateCount > 1) {
+					const badge = document.createElement("span")
+					badge.className = "vtm-stash-count"
+					badge.textContent = `${duplicateCount}x`
+					titleRow.appendChild(badge)
+				}
+
+				const url = document.createElement("div")
+				url.className = "vtm-stash-tab-url"
+				url.textContent = formatUrl(tab.url)
+
+				meta.append(titleRow, url)
 				item.appendChild(meta)
 				column.appendChild(item)
 			})
