@@ -1,9 +1,20 @@
 const SETTINGS_KEY = "settingsData"
 
+export const SETTING_DENSITIES = ["comfortable", "compact"]
+export const SETTING_LABEL_SIZES = ["small", "medium", "large"]
+export const SETTING_THEMES = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
+
+export const DEFAULT_SETTINGS = {
+	excludedDomains: [],
+	density: "comfortable",
+	labelSize: "medium",
+	theme: "rose-pine-moon",
+}
+
 export async function getSettings() {
 	const data = await chrome.storage.local.get(SETTINGS_KEY)
 	return {
-		excludedDomains: [],
+		...DEFAULT_SETTINGS,
 		...(data[SETTINGS_KEY] || {}),
 	}
 }
@@ -12,6 +23,15 @@ export async function saveSettings(settings) {
 	await chrome.storage.local.set({
 		[SETTINGS_KEY]: {
 			excludedDomains: normalizeDomains(settings.excludedDomains || []),
+			density: SETTING_DENSITIES.includes(settings.density)
+				? settings.density
+				: DEFAULT_SETTINGS.density,
+			labelSize: SETTING_LABEL_SIZES.includes(settings.labelSize)
+				? settings.labelSize
+				: DEFAULT_SETTINGS.labelSize,
+			theme: SETTING_THEMES.includes(settings.theme)
+				? settings.theme
+				: DEFAULT_SETTINGS.theme,
 		},
 	})
 }

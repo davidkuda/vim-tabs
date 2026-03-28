@@ -1,7 +1,16 @@
 import { curTab } from "./state.js"
 import { getSettings, normalizeDomain, saveSettings } from "../shared/settings.js"
 
-export function createEventHandlers({ backdrop, render, renderTabs, state, actions }) {
+const settingsColumnCounts = [() => 0, () => 5, () => 3]
+
+export function createEventHandlers({
+	backdrop,
+	render,
+	renderTabs,
+	state,
+	actions,
+	applyUiSettings,
+}) {
 	function collectMatches(query) {
 		if (!query) return []
 
@@ -153,13 +162,31 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	}
 
 	function clampSettingsSelection() {
-		const count =
-			state.settings.excludedDomains.length + (state.settings.editing ? 1 : 0)
-		state.settings.sel = Math.max(0, Math.min(state.settings.sel, count - 1))
+		state.settings.sel.col = Math.max(0, Math.min(state.settings.sel.col, 2))
+		state.settings.sel.rows[0] = Math.max(
+			0,
+			Math.min(
+				state.settings.sel.rows[0],
+				state.settings.excludedDomains.length + (state.settings.editing ? 1 : 0) - 1,
+			),
+		)
+		state.settings.sel.rows[1] = Math.max(
+			0,
+			Math.min(state.settings.sel.rows[1], settingsColumnCounts[1]() - 1),
+		)
+		state.settings.sel.rows[2] = Math.max(
+			0,
+			Math.min(state.settings.sel.rows[2], settingsColumnCounts[2]() - 1),
+		)
 	}
 
 	async function persistSettings() {
-		await saveSettings({ excludedDomains: state.settings.excludedDomains })
+		await saveSettings({
+			excludedDomains: state.settings.excludedDomains,
+			density: state.settings.density,
+			labelSize: state.settings.labelSize,
+			theme: state.settings.theme,
+		})
 	}
 
 	function resetSettingsStatus() {
@@ -242,8 +269,12 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		state.settings.returnView = view === "settings" ? "tabs" : view
 		const settings = await getSettings()
 		state.settings.excludedDomains = settings.excludedDomains || []
+		state.settings.density = settings.density
+		state.settings.labelSize = settings.labelSize
+		state.settings.theme = settings.theme
 		clampSettingsSelection()
 		state.view = "settings"
+		applyUiSettings()
 		render()
 	}
 
@@ -257,9 +288,10 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	}
 
 	function startSettingsInsert(offset) {
+		if (state.settings.sel.col !== 0) return
 		resetSettingsStatus()
 		const baseIndex = state.settings.excludedDomains.length
-			? state.settings.sel + offset
+			? state.settings.sel.rows[0] + offset
 			: 0
 		state.settings.editing = true
 		state.settings.draft = ""
@@ -267,7 +299,7 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			0,
 			Math.min(baseIndex, state.settings.excludedDomains.length),
 		)
-		state.settings.sel = state.settings.insertIndex
+		state.settings.sel.rows[0] = state.settings.insertIndex
 		render()
 	}
 
@@ -286,7 +318,7 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		}
 
 		state.settings.excludedDomains.splice(state.settings.insertIndex, 0, domain)
-		state.settings.sel = state.settings.excludedDomains.indexOf(domain)
+		state.settings.sel.rows[0] = state.settings.excludedDomains.indexOf(domain)
 		state.settings.editing = false
 		state.settings.draft = ""
 		state.settings.insertIndex = 0
@@ -305,11 +337,45 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 	}
 
 	async function deleteSelectedSetting() {
-		if (state.settings.editing || !state.settings.excludedDomains.length) return
-		const [removed] = state.settings.excludedDomains.splice(state.settings.sel, 1)
+		if (
+			state.settings.editing ||
+			state.settings.sel.col !== 0 ||
+			!state.settings.excludedDomains.length
+		) {
+			return
+		}
+		const [removed] = state.settings.excludedDomains.splice(
+			state.settings.sel.rows[0],
+			1,
+		)
 		clampSettingsSelection()
 		state.settings.status = removed ? `Removed ${removed} from the exclusion list.` : ""
 		await persistSettings()
+		render()
+	}
+
+	async function applyCurrentSettingsOption() {
+		resetSettingsStatus()
+		if (state.settings.sel.col === 1) {
+			if (state.settings.sel.rows[1] < 2) {
+				state.settings.density =
+					state.settings.sel.rows[1] === 0 ? "comfortable" : "compact"
+				state.settings.status = `Density set to ${state.settings.density}.`
+			} else {
+				const sizeMap = ["small", "medium", "large"]
+				state.settings.labelSize = sizeMap[state.settings.sel.rows[1] - 2]
+				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
+			}
+		}
+
+		if (state.settings.sel.col === 2) {
+			const themeMap = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
+			state.settings.theme = themeMap[state.settings.sel.rows[2]]
+			state.settings.status = `Theme set to ${state.settings.theme.replaceAll("-", " ")}.`
+		}
+
+		await persistSettings()
+		applyUiSettings()
 		render()
 	}
 
@@ -507,9 +573,14 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			}
 			if (event.key === "j") {
 				event.preventDefault()
-				state.settings.sel = Math.min(
-					state.settings.sel + 1,
-					state.settings.excludedDomains.length - 1,
+				const col = state.settings.sel.col
+				const maxRow =
+					col === 0
+						? state.settings.excludedDomains.length - 1
+						: settingsColumnCounts[col]() - 1
+				state.settings.sel.rows[col] = Math.min(
+					state.settings.sel.rows[col] + 1,
+					maxRow,
 				)
 				resetSettingsStatus()
 				render()
@@ -517,7 +588,22 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			}
 			if (event.key === "k") {
 				event.preventDefault()
-				state.settings.sel = Math.max(state.settings.sel - 1, 0)
+				const col = state.settings.sel.col
+				state.settings.sel.rows[col] = Math.max(state.settings.sel.rows[col] - 1, 0)
+				resetSettingsStatus()
+				render()
+				return
+			}
+			if (event.key === "h") {
+				event.preventDefault()
+				state.settings.sel.col = Math.max(state.settings.sel.col - 1, 0)
+				resetSettingsStatus()
+				render()
+				return
+			}
+			if (event.key === "l") {
+				event.preventDefault()
+				state.settings.sel.col = Math.min(state.settings.sel.col + 1, 2)
 				resetSettingsStatus()
 				render()
 				return
@@ -535,6 +621,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			if (event.key === "d") {
 				event.preventDefault()
 				deleteSelectedSetting()
+				return
+			}
+			if (event.key === "Enter") {
+				event.preventDefault()
+				applyCurrentSettingsOption()
 			}
 			return
 		}

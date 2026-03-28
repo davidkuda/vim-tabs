@@ -7,6 +7,9 @@
 			:root {
 				color-scheme: dark;
 				--accent: #d7827e;
+				--preview-bg: #232136;
+				--preview-text: #f6f0ea;
+				--preview-label-size: 3rem;
 			}
 
 			* {
@@ -33,10 +36,10 @@
 					),
 					linear-gradient(
 						135deg,
-						color-mix(in srgb, var(--accent) 14%, rgba(24, 22, 24, 0.92)),
-						rgba(31, 29, 31, 0.96)
+						color-mix(in srgb, var(--accent) 14%, var(--preview-bg)),
+						var(--preview-bg)
 					);
-				color: #f6f0ea;
+				color: var(--preview-text);
 				overflow: hidden;
 			}
 
@@ -71,7 +74,7 @@
 
 			.badge {
 				padding: 14px 22px;
-				font-size: 3rem;
+				font-size: var(--preview-label-size);
 				font-weight: 600;
 				line-height: 0.95;
 				letter-spacing: -0.04em;

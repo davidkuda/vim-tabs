@@ -6,6 +6,9 @@ document.body.appendChild(root)
 
 const state = {
 	excludedDomains: [],
+	density: "comfortable",
+	labelSize: "medium",
+	theme: "rose-pine-moon",
 	status: "",
 }
 
@@ -15,7 +18,12 @@ function setStatus(message) {
 }
 
 async function persist() {
-	await saveSettings({ excludedDomains: state.excludedDomains })
+	await saveSettings({
+		excludedDomains: state.excludedDomains,
+		density: state.density,
+		labelSize: state.labelSize,
+		theme: state.theme,
+	})
 }
 
 async function addDomain(rawValue) {
@@ -94,6 +102,9 @@ function render() {
 
 getSettings().then((settings) => {
 	state.excludedDomains = settings.excludedDomains || []
+	state.density = settings.density
+	state.labelSize = settings.labelSize
+	state.theme = settings.theme
 	render()
 	document.getElementById("vtm-domain-input")?.focus()
 })

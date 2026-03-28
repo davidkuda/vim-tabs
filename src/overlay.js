@@ -1,32 +1,62 @@
 import { createActions } from "./overlay/actions.js"
-import { applyOverlayFrame, createOverlayDom } from "./overlay/dom.js"
+import {
+	applyOverlayFrame,
+	applyOverlayTheme,
+	createOverlayDom,
+} from "./overlay/dom.js"
 import { createEventHandlers } from "./overlay/events.js"
 import { createRenderer } from "./overlay/render.js"
 import { createState, createUndoStack } from "./overlay/state.js"
-import { getWindowColor } from "./shared/window-colors.js"
+import { getSettings } from "./shared/settings.js"
+import { getLabelFontSize, getUiTheme, getWindowColor } from "./shared/window-colors.js"
 
 if (!document.getElementById("vtm-backdrop")) {
 	const state = createState()
 	const undo = createUndoStack()
-	const { backdrop, columns, footer } = createOverlayDom()
+	const { backdrop, modal, columns, footer } = createOverlayDom()
 	const renderer = createRenderer(state, columns, footer)
 	const actions = createActions(state, undo, renderer.renderTabs)
+	const applyUiSettings = () => {
+		const uiTheme = getUiTheme(state.settings.theme)
+		applyOverlayTheme(backdrop, modal, state.settings, uiTheme)
+		const currentWindow = state.wins[state.sel.w]
+		if (currentWindow) {
+			const windowColor = getWindowColor(
+				currentWindow,
+				state.sel.w,
+				state.settings.theme,
+			)
+			applyOverlayFrame(
+				backdrop,
+				windowColor.accent,
+				windowColor.label,
+				getLabelFontSize(state.settings.labelSize),
+			)
+		}
+	}
 	const events = createEventHandlers({
 		backdrop,
 		render: renderer.render,
 		renderTabs: renderer.renderTabs,
 		state,
 		actions,
+		applyUiSettings,
 	})
 
-	chrome.runtime.sendMessage({ type: "getData" }, (resp) => {
+	Promise.all([
+		new Promise((resolve) => {
+			chrome.runtime.sendMessage({ type: "getData" }, resolve)
+		}),
+		getSettings(),
+	]).then(([resp, settings]) => {
+		state.settings.excludedDomains = settings.excludedDomains || []
+		state.settings.density = settings.density
+		state.settings.labelSize = settings.labelSize
+		state.settings.theme = settings.theme
+
 		state.wins = resp.wins
 		state.sel = resp.activeSel
-		const currentWindow = state.wins[state.sel.w]
-		if (currentWindow) {
-			const windowColor = getWindowColor(currentWindow, state.sel.w)
-			applyOverlayFrame(backdrop, windowColor.accent, windowColor.label)
-		}
+		applyUiSettings()
 		renderer.render()
 		events.attachListeners()
 	})

@@ -1,5 +1,55 @@
 import { getWindowColor } from "../shared/window-colors.js"
 
+const layoutOptions = {
+	density: [
+		{
+			value: "comfortable",
+			title: "Comfortable density",
+			subtitle: "More spacing and larger columns",
+		},
+		{
+			value: "compact",
+			title: "Compact density",
+			subtitle: "Denser layout with more tabs on screen",
+		},
+	],
+	labelSize: [
+		{
+			value: "small",
+			title: "Window label small",
+			subtitle: "Quieter badge size",
+		},
+		{
+			value: "medium",
+			title: "Window label medium",
+			subtitle: "Balanced badge size",
+		},
+		{
+			value: "large",
+			title: "Window label large",
+			subtitle: "Bold badge size",
+		},
+	],
+}
+
+const themeOptions = [
+	{
+		value: "rose-pine",
+		title: "Rose Pine",
+		subtitle: "Warm dark background",
+	},
+	{
+		value: "rose-pine-moon",
+		title: "Rose Pine Moon",
+		subtitle: "Cooler dark background",
+	},
+	{
+		value: "rose-pine-dawn",
+		title: "Rose Pine Dawn",
+		subtitle: "Light mode palette",
+	},
+]
+
 export function createRenderer(state, columns, footer) {
 	function escapeHtml(text) {
 		return `${text || ""}`
@@ -108,7 +158,7 @@ export function createRenderer(state, columns, footer) {
 			.forEach((node) => node.classList.remove("vtm-selected"))
 
 		const current = document.querySelector(
-			`.vtm-settings-card[data-index="${state.settings.sel}"]`,
+			`.vtm-settings-card[data-col="${state.settings.sel.col}"][data-row="${state.settings.sel.rows[state.settings.sel.col]}"]`,
 		)
 
 		if (current) {
@@ -121,7 +171,7 @@ export function createRenderer(state, columns, footer) {
 		columns.innerHTML = ""
 
 		state.wins.forEach((win, wi) => {
-			const windowColor = getWindowColor(win, wi)
+			const windowColor = getWindowColor(win, wi, state.settings.theme)
 			const col = document.createElement("div")
 			col.className = "vtm-col"
 			col.dataset.w = wi
@@ -430,25 +480,12 @@ export function createRenderer(state, columns, footer) {
 		const hero = document.createElement("div")
 		hero.className = "vtm-help-hero"
 		hero.innerHTML = `
-			<h2 class="vtm-help-title vtm-settings-title">Excluded hostnames</h2>
-			<p class="vtm-help-copy">These domains are skipped when you stash a window. Matching is hostname-based, so excluding <code>openai.com</code> also excludes <code>chat.openai.com</code>.</p>
+			<h2 class="vtm-help-title vtm-settings-title">Settings</h2>
 		`
 		wrap.appendChild(hero)
 
 		const lane = document.createElement("div")
 		lane.className = "vtm-settings-lane"
-
-		const col = document.createElement("div")
-		col.className = "vtm-col vtm-settings-col"
-		col.style.borderColor = "rgba(255, 255, 255, 0.08)"
-		col.style.background =
-			"linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012)), rgba(42, 39, 63, 0.74)"
-
-		const header = document.createElement("div")
-		header.className = "vtm-col-header"
-		header.style.background = "#d7827e"
-		header.textContent = "Excluded Hostnames"
-		col.appendChild(header)
 
 		const domains = [...state.settings.excludedDomains]
 		const items = domains.map((domain) => ({
@@ -465,20 +502,44 @@ export function createRenderer(state, columns, footer) {
 			})
 		}
 
+		const createColumn = (title, accent, colIndex) => {
+			const col = document.createElement("div")
+			col.className = "vtm-col vtm-settings-col"
+			const header = document.createElement("div")
+			header.className = "vtm-col-header"
+			header.style.background = accent
+			header.textContent = title
+			col.appendChild(header)
+			lane.appendChild(col)
+			return col
+		}
+
+		const hostnamesColumn = createColumn("Excluded Hostnames", "#d7827e", 0)
+		const hostnamesIntro = document.createElement("div")
+		hostnamesIntro.className = "vtm-settings-note"
+		hostnamesIntro.innerHTML = `
+			<div class="vtm-settings-note-title">Skip tabs while stashing</div>
+			<div class="vtm-settings-note-copy">You can paste a full URL like <code>https://chat.openai.com/c/123</code>, but VimTabs stores only the hostname <code>chat.openai.com</code>. Paths such as <code>/c/123</code> are ignored.</div>
+		`
+		hostnamesColumn.appendChild(hostnamesIntro)
+
 		if (!items.length) {
 			const empty = document.createElement("div")
-			empty.className = "vtm-settings-empty"
+			empty.className = "vtm-card vtm-settings-card vtm-settings-empty"
+			empty.dataset.col = "0"
+			empty.dataset.row = "0"
 			empty.innerHTML = `
 				<div class="vtm-settings-empty-title">No exclusions yet</div>
 				<div class="vtm-settings-empty-copy">Press <code>o</code> or <code>O</code> to add a hostname like <span>gmail.com</span>.</div>
 				<div class="vtm-settings-empty-copy">Press <code>Enter</code> to save it and <code>:</code> to return to tabs.</div>
 			`
-			col.appendChild(empty)
+			hostnamesColumn.appendChild(empty)
 		} else {
 			items.forEach((item, index) => {
 				const card = document.createElement("div")
 				card.className = "vtm-card vtm-settings-card"
-				card.dataset.index = index
+				card.dataset.col = "0"
+				card.dataset.row = `${index}`
 
 				if (item.type === "draft") {
 					card.classList.add("vtm-settings-draft")
@@ -491,11 +552,55 @@ export function createRenderer(state, columns, footer) {
 					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
 				`
 				card.appendChild(meta)
-				col.appendChild(card)
+				hostnamesColumn.appendChild(card)
 			})
 		}
 
-		lane.appendChild(col)
+		const layoutColumn = createColumn("Layout", "#286983", 1)
+		const layoutCards = [
+			...layoutOptions.density.map((option) => ({
+				...option,
+				active: state.settings.density === option.value,
+			})),
+			...layoutOptions.labelSize.map((option) => ({
+				...option,
+				active: state.settings.labelSize === option.value,
+			})),
+		]
+
+		layoutCards.forEach((item, index) => {
+			const card = document.createElement("div")
+			card.className = "vtm-card vtm-settings-card"
+			card.dataset.col = "1"
+			card.dataset.row = `${index}`
+			if (item.active) card.classList.add("vtm-settings-active")
+			card.innerHTML = `
+				<div class="vtm-meta">
+					<span class="vtm-title">${escapeHtml(item.title)}</span>
+					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+				</div>
+			`
+			layoutColumn.appendChild(card)
+		})
+
+		const themeColumn = createColumn("Theme", "#907aa9", 2)
+		themeOptions.forEach((item, index) => {
+			const card = document.createElement("div")
+			card.className = "vtm-card vtm-settings-card"
+			card.dataset.col = "2"
+			card.dataset.row = `${index}`
+			if (state.settings.theme === item.value) {
+				card.classList.add("vtm-settings-active")
+			}
+			card.innerHTML = `
+				<div class="vtm-meta">
+					<span class="vtm-title">${escapeHtml(item.title)}</span>
+					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+				</div>
+			`
+			themeColumn.appendChild(card)
+		})
+
 		wrap.appendChild(lane)
 		columns.appendChild(wrap)
 		highlightSettings()
@@ -515,7 +620,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>o</code> or <code>O</code> to add a hostname, <code>d</code> to delete, <code>j</code> and <code>k</code> to move, and <code>:</code> to return to the tabs overview.</div>
+			<div class="vtm-footer-copy">Press <code>h</code> and <code>l</code> to move between columns, <code>j</code> and <code>k</code> to move within a column, <code>Enter</code> to apply an option, and <code>:</code> to return to the tabs overview.</div>
 		`
 	}
 

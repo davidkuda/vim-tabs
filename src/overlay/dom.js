@@ -33,12 +33,13 @@ export function createOverlayDom() {
 
 	return {
 		backdrop,
+		modal,
 		columns,
 		footer,
 	}
 }
 
-export function applyOverlayFrame(backdrop, color, label) {
+export function applyOverlayFrame(backdrop, color, label, labelFontSize = "3rem") {
 	backdrop.style.boxSizing = "border-box"
 	backdrop.style.border = `3px solid ${color}`
 	backdrop.style.background = [
@@ -64,11 +65,45 @@ export function applyOverlayFrame(backdrop, color, label) {
 		"left:20px",
 		"pointer-events:none",
 		"padding:14px 22px",
-		"font:600 3rem/0.95 system-ui,sans-serif",
+		`font:600 ${labelFontSize}/0.95 system-ui,sans-serif`,
 		"letter-spacing:-0.04em",
 		"text-transform:uppercase",
 		`background:${color}`,
 		"color:#f6f0ea",
 		"box-shadow:0 1px 0 rgba(255,255,255,0.22)",
 	].join(";")
+}
+
+export function applyOverlayTheme(backdrop, modal, settings, uiTheme) {
+	const density = settings.density || "comfortable"
+
+	backdrop.style.colorScheme = uiTheme.colorScheme
+	backdrop.style.setProperty("--vtm-text-primary", uiTheme.text.primary)
+	backdrop.style.setProperty("--vtm-text-muted", uiTheme.text.muted)
+	backdrop.style.setProperty("--vtm-text-subtle", uiTheme.text.subtle)
+	backdrop.style.setProperty("--vtm-backdrop-base", uiTheme.backdrop.base)
+	backdrop.style.setProperty("--vtm-backdrop-wash-top", uiTheme.backdrop.washTop)
+	backdrop.style.setProperty("--vtm-backdrop-wash-bottom", uiTheme.backdrop.washBottom)
+	backdrop.style.setProperty("--vtm-modal-base", uiTheme.modal.base)
+	backdrop.style.setProperty("--vtm-modal-glow", uiTheme.modal.glow)
+	backdrop.style.setProperty("--vtm-modal-ring", uiTheme.modal.ring)
+	backdrop.style.setProperty(
+		"--vtm-card-padding-y",
+		density === "compact" ? "8px" : "10px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-card-padding-x",
+		density === "compact" ? "10px" : "12px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-col-min-width",
+		density === "compact" ? "220px" : "250px",
+	)
+	backdrop.style.setProperty("--vtm-col-gap", density === "compact" ? "10px" : "14px")
+	backdrop.style.setProperty(
+		"--vtm-col-padding",
+		density === "compact" ? "10px" : "12px",
+	)
+
+	modal.style.color = uiTheme.text.primary
 }

@@ -1,4 +1,9 @@
-import { getWindowColor } from "../shared/window-colors.js"
+import {
+	getLabelFontSize,
+	getUiTheme,
+	getWindowColor,
+} from "../shared/window-colors.js"
+import { getSettings } from "../shared/settings.js"
 import { clearPreviewSession, getPreviewSession, setPreviewSession } from "./session.js"
 
 const WINDOW_BORDER_ID = "vtm-window-border"
@@ -30,7 +35,7 @@ export async function openFallbackPage(tab) {
 	return fallback
 }
 
-function mountWindowBorder(borderId, color, label) {
+function mountWindowBorder(borderId, color, label, labelFontSize, frameVeil) {
 	const existing = document.getElementById(borderId)
 	if (existing) existing.remove()
 
@@ -44,7 +49,7 @@ function mountWindowBorder(borderId, color, label) {
 		"overflow:hidden",
 		"box-sizing:border-box",
 		`border:3px solid ${color}`,
-		"background:rgba(10,10,12,0.14)",
+		`background:${frameVeil}`,
 		"backdrop-filter:blur(4px) saturate(1.05)",
 		"box-shadow:inset 0 0 0 1px rgba(255,255,255,0.14)",
 	].join(";")
@@ -73,7 +78,7 @@ function mountWindowBorder(borderId, color, label) {
 		"top:20px",
 		"left:20px",
 		"padding:14px 22px",
-		"font:600 3rem/0.95 system-ui,sans-serif",
+		`font:600 ${labelFontSize}/0.95 system-ui,sans-serif`,
 		"letter-spacing:-0.04em",
 		"text-transform:uppercase",
 		`background:${color}`,
@@ -103,14 +108,16 @@ export async function clearWindowBorders(tabs) {
 	}
 }
 
-async function openPreviewPage(win, index) {
+async function openPreviewPage(win, index, settings) {
 	const activeTab = win.tabs.find((tab) => tab.active)
 	if (!activeTab?.id) return null
 
-	const windowColor = getWindowColor(win, index)
+	const windowColor = getWindowColor(win, index, settings.theme)
 	const params = new URLSearchParams({
 		color: windowColor.accent,
 		label: windowColor.label,
+		theme: settings.theme,
+		labelSize: settings.labelSize,
 	})
 
 	const helperTab = await chrome.tabs.create({
@@ -128,6 +135,9 @@ async function openPreviewPage(win, index) {
 
 export async function showWindowPreviews(wins, currentWindowId) {
 	await clearPreviewArtifacts()
+	const settings = await getSettings()
+	const uiTheme = getUiTheme(settings.theme)
+	const labelFontSize = getLabelFontSize(settings.labelSize)
 
 	const entries = []
 	const borderTabIds = []
@@ -139,15 +149,21 @@ export async function showWindowPreviews(wins, currentWindowId) {
 		if (!activeTab?.id) continue
 
 		try {
-			const windowColor = getWindowColor(win, index)
+			const windowColor = getWindowColor(win, index, settings.theme)
 			await chrome.scripting.executeScript({
 				target: { tabId: activeTab.id },
 				func: mountWindowBorder,
-				args: [WINDOW_BORDER_ID, windowColor.accent, windowColor.label],
+				args: [
+					WINDOW_BORDER_ID,
+					windowColor.accent,
+					windowColor.label,
+					labelFontSize,
+					uiTheme.backdrop.frameVeil,
+				],
 			})
 			borderTabIds.push(activeTab.id)
 		} catch {
-			const entry = await openPreviewPage(win, index)
+			const entry = await openPreviewPage(win, index, settings)
 			if (entry) entries.push(entry)
 		}
 	}
