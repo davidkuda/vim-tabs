@@ -18,14 +18,6 @@ export async function openSettingsPage(windowId) {
 	})
 }
 
-export async function openMarksPage(windowId) {
-	return chrome.tabs.create({
-		windowId,
-		url: chrome.runtime.getURL("marks.html"),
-		active: true,
-	})
-}
-
 export async function stashWindow(windowId, senderTab) {
 	const previewSession = await getPreviewSession()
 	const settings = await getSettings()

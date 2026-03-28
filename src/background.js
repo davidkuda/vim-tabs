@@ -9,13 +9,8 @@ import {
 	showWindowPreviews,
 } from "./background/overlay.js"
 import { getPreviewSession } from "./background/session.js"
-import {
-	openMarksPage,
-	openSettingsPage,
-	openStashPage,
-	stashWindow,
-} from "./background/stash.js"
-import { getMarksData, openMark, setMark } from "./shared/marks.js"
+import { openSettingsPage, openStashPage, stashWindow } from "./background/stash.js"
+import { deleteMark, getMarksData, openMark, setMark } from "./shared/marks.js"
 import { getStashData } from "./shared/stash.js"
 
 async function getFocusedTab() {
@@ -26,10 +21,15 @@ async function getFocusedTab() {
 	return tab
 }
 
-async function launchOverlay(tab) {
+async function launchOverlay(tab, options = {}) {
 	if (!tab?.id || !tab.windowId) return
 
 	await clearOverlayArtifacts()
+	await chrome.storage.local.set({
+		overlayContext: {
+			initialView: options.initialView || "tabs",
+		},
+	})
 
 	const { wins } = await getData()
 	let overlayHostTabId = tab.id
@@ -99,8 +99,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 
 	if (command === "open-marks") {
-		const tab = await getFocusedTab()
-		await openMarksPage(tab?.windowId)
+		await launchOverlay(await getFocusedTab(), { initialView: "marks" })
+		return
 	}
 })
 
@@ -112,6 +112,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "getStashData") {
 		getStashData().then(sendResponse)
+		return true
+	}
+
+	if (msg.type === "getOverlayContext") {
+		chrome.storage.local.get("overlayContext").then((data) => {
+			chrome.storage.local.remove("overlayContext")
+			sendResponse(data.overlayContext || { initialView: "tabs" })
+		})
 		return true
 	}
 
@@ -132,10 +140,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		clearOverlayArtifacts().then(() => openSettingsPage(sender?.tab?.windowId))
 	}
 
-	if (msg.type === "openMarks") {
-		clearOverlayArtifacts().then(() => openMarksPage(sender?.tab?.windowId))
-	}
-
 	if (msg.type === "openStashedTab") {
 		chrome.tabs.create({
 			windowId: sender?.tab?.windowId,
@@ -150,6 +154,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "setMark") {
 		setMark(msg.key, msg.tab).then(sendResponse)
+		return true
+	}
+
+	if (msg.type === "deleteMark") {
+		deleteMark(msg.key).then(sendResponse)
 		return true
 	}
 

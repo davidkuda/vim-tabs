@@ -48,10 +48,13 @@ if (!document.getElementById("vtm-backdrop")) {
 			chrome.runtime.sendMessage({ type: "getData" }, resolve)
 		}),
 		new Promise((resolve) => {
+			chrome.runtime.sendMessage({ type: "getOverlayContext" }, resolve)
+		}),
+		new Promise((resolve) => {
 			chrome.runtime.sendMessage({ type: "getMarksData" }, resolve)
 		}),
 		getSettings(),
-	]).then(([resp, marksData, settings]) => {
+	]).then(([resp, overlayContext, marksData, settings]) => {
 		state.marks.items = marksData.marks || {}
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.density = settings.density
@@ -60,6 +63,7 @@ if (!document.getElementById("vtm-backdrop")) {
 
 		state.wins = resp.wins
 		state.sel = resp.activeSel
+		state.view = overlayContext?.initialView || "tabs"
 		applyUiSettings()
 		renderer.render()
 		events.attachListeners()

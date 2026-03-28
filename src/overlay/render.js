@@ -51,6 +51,16 @@ const themeOptions = [
 ]
 
 export function createRenderer(state, columns, footer) {
+	function getMarkColumns() {
+		const marks = Object.values(state.marks.items || {}).sort((a, b) =>
+			a.key.localeCompare(b.key),
+		)
+		return [
+			marks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
+			marks.filter((mark) => mark.key === mark.key.toUpperCase()),
+		]
+	}
+
 	function escapeHtml(text) {
 		return `${text || ""}`
 			.replaceAll("&", "&amp;")
@@ -183,6 +193,21 @@ export function createRenderer(state, columns, footer) {
 
 		const current = document.querySelector(
 			`.vtm-settings-card[data-col="${state.settings.sel.col}"][data-row="${state.settings.sel.rows[state.settings.sel.col]}"]`,
+		)
+
+		if (current) {
+			current.classList.add("vtm-selected")
+			current.scrollIntoView({ block: "nearest", inline: "nearest" })
+		}
+	}
+
+	function highlightMarks() {
+		document
+			.querySelectorAll(".vtm-mark-card.vtm-selected")
+			.forEach((node) => node.classList.remove("vtm-selected"))
+
+		const current = document.querySelector(
+			`.vtm-mark-card[data-col="${state.marks.sel.col}"][data-row="${state.marks.sel.rows[state.marks.sel.col]}"]`,
 		)
 
 		if (current) {
@@ -679,6 +704,105 @@ export function createRenderer(state, columns, footer) {
 		`
 	}
 
+	function renderMarks() {
+		columns.innerHTML = ""
+
+		const marksView = document.createElement("section")
+		marksView.className = "vtm-settings-view"
+		marksView.innerHTML = `
+			<div class="vtm-help-hero">
+				<h2 class="vtm-help-title vtm-settings-title">Marks</h2>
+			</div>
+		`
+
+		const lane = document.createElement("div")
+		lane.className = "vtm-settings-lane"
+
+		const markColumns = getMarkColumns()
+		const titles = ["Temporary Marks", "Persistent Marks"]
+		const accents = ["#286983", "#907aa9"]
+		const emptyCopy = [
+			"No lowercase marks for currently open tabs.",
+			"No uppercase marks yet.",
+		]
+
+		markColumns.forEach((items, colIndex) => {
+			const col = document.createElement("div")
+			col.className = "vtm-col vtm-settings-col"
+
+			const header = document.createElement("div")
+			header.className = "vtm-col-header"
+			header.style.background = accents[colIndex]
+			header.textContent = titles[colIndex]
+			col.appendChild(header)
+
+			if (!items.length) {
+				const empty = document.createElement("div")
+				empty.className = "vtm-card vtm-settings-card vtm-settings-empty vtm-mark-card"
+				empty.dataset.col = `${colIndex}`
+				empty.dataset.row = "0"
+				empty.innerHTML = `
+					<div class="vtm-settings-empty-title">${emptyCopy[colIndex]}</div>
+					<div class="vtm-settings-empty-copy">${colIndex === 0 ? "Use <code>m</code> plus a lowercase letter from the tabs overview." : "Use <code>m</code> plus an uppercase letter from the tabs overview."}</div>
+				`
+				col.appendChild(empty)
+			} else {
+				items.forEach((mark, rowIndex) => {
+					const card = document.createElement("div")
+					card.className = "vtm-card vtm-settings-card vtm-mark-card"
+					card.dataset.col = `${colIndex}`
+					card.dataset.row = `${rowIndex}`
+
+					const key = document.createElement("span")
+					key.className = "vtm-mark-badge"
+					key.textContent = mark.key
+
+					const meta = document.createElement("div")
+					meta.className = "vtm-meta"
+
+					const head = document.createElement("div")
+					head.className = "vtm-title-row"
+					const title = document.createElement("span")
+					title.className = "vtm-title"
+					title.textContent = mark.title || mark.url
+					head.append(title, key)
+
+					const url = document.createElement("span")
+					url.className = "vtm-url"
+					url.textContent = formatUrl(mark.url)
+
+					meta.append(head, url)
+					card.appendChild(meta)
+					col.appendChild(card)
+				})
+			}
+
+			lane.appendChild(col)
+		})
+
+		marksView.appendChild(lane)
+		columns.appendChild(marksView)
+		highlightMarks()
+
+		if (state.marks.pending === "jump") {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Jump to a mark with <code>a-z</code> or <code>A-Z</code>. Press <code>Esc</code> to cancel.</div>
+			`
+			return
+		}
+
+		if (state.marks.status) {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">${state.marks.status}</div>
+			`
+			return
+		}
+
+		footer.innerHTML = `
+			<div class="vtm-footer-copy">Press <code>h</code> and <code>l</code> to move between columns, <code>j</code> and <code>k</code> to move within a column, <code>d</code> to remove the selected mark, <code>'</code> plus a letter to jump, and <code>Esc</code> to return to the tabs overview.</div>
+		`
+	}
+
 	function countMatches(query) {
 		if (!query) return 0
 		let count = 0
@@ -713,6 +837,10 @@ export function createRenderer(state, columns, footer) {
 		}
 		if (state.view === "settings") {
 			renderSettings()
+			return
+		}
+		if (state.view === "marks") {
+			renderMarks()
 			return
 		}
 		renderStash()

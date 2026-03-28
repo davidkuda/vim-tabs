@@ -190,6 +190,36 @@ export function createEventHandlers({
 		)
 	}
 
+	function getMarkColumns() {
+		const marks = Object.values(state.marks.items || {}).sort((a, b) =>
+			a.key.localeCompare(b.key),
+		)
+		return [
+			marks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
+			marks.filter((mark) => mark.key === mark.key.toUpperCase()),
+		]
+	}
+
+	function currentSelectedMark() {
+		const columns = getMarkColumns()
+		return (
+			columns[state.marks.sel.col]?.[state.marks.sel.rows[state.marks.sel.col]] || null
+		)
+	}
+
+	function clampMarksSelection() {
+		const columns = getMarkColumns()
+		state.marks.sel.col = Math.max(0, Math.min(state.marks.sel.col, 1))
+		state.marks.sel.rows[0] = Math.max(
+			0,
+			Math.min(state.marks.sel.rows[0], Math.max(columns[0].length - 1, 0)),
+		)
+		state.marks.sel.rows[1] = Math.max(
+			0,
+			Math.min(state.marks.sel.rows[1], Math.max(columns[1].length - 1, 0)),
+		)
+	}
+
 	async function persistSettings() {
 		await saveSettings({
 			excludedDomains: state.settings.excludedDomains,
@@ -318,6 +348,21 @@ export function createEventHandlers({
 			state.stash.sessions = stashData.sessions || []
 			clampStashSelection()
 			state.view = "stash"
+			render()
+		})
+	}
+
+	function toggleMarks() {
+		state.view = state.view === "marks" ? "tabs" : "marks"
+		clampMarksSelection()
+		render()
+	}
+
+	function refreshMarks(callback) {
+		chrome.runtime.sendMessage({ type: "getMarksData" }, (marksData) => {
+			state.marks.items = marksData.marks || {}
+			clampMarksSelection()
+			if (callback) callback()
 			render()
 		})
 	}
@@ -656,6 +701,78 @@ export function createEventHandlers({
 			return
 		}
 
+		if (state.view === "marks") {
+			if (event.key === "Escape") {
+				event.preventDefault()
+				if (state.marks.pending) {
+					clearMarksState()
+					render()
+					return
+				}
+				toggleMarks()
+				return
+			}
+			if (event.key === ":") {
+				event.preventDefault()
+				openSettings("marks")
+				return
+			}
+			if (event.key === "'") {
+				event.preventDefault()
+				startMarkMode("jump")
+				return
+			}
+			if (event.key === "d") {
+				event.preventDefault()
+				const mark = currentSelectedMark()
+				if (!mark) return
+				chrome.runtime.sendMessage({ type: "deleteMark", key: mark.key }, () => {
+					state.marks.status = `Removed mark <code>${mark.key}</code>.`
+					refreshMarks()
+				})
+				return
+			}
+			if (event.key === "j") {
+				event.preventDefault()
+				const col = state.marks.sel.col
+				const columns = getMarkColumns()
+				state.marks.sel.rows[col] = Math.min(
+					state.marks.sel.rows[col] + 1,
+					Math.max(columns[col].length - 1, 0),
+				)
+				render()
+				return
+			}
+			if (event.key === "k") {
+				event.preventDefault()
+				const col = state.marks.sel.col
+				state.marks.sel.rows[col] = Math.max(state.marks.sel.rows[col] - 1, 0)
+				render()
+				return
+			}
+			if (event.key === "h") {
+				event.preventDefault()
+				state.marks.sel.col = Math.max(state.marks.sel.col - 1, 0)
+				render()
+				return
+			}
+			if (event.key === "l") {
+				event.preventDefault()
+				state.marks.sel.col = Math.min(state.marks.sel.col + 1, 1)
+				render()
+				return
+			}
+			if (event.key === "Enter") {
+				event.preventDefault()
+				const columns = getMarkColumns()
+				const mark =
+					columns[state.marks.sel.col][state.marks.sel.rows[state.marks.sel.col]]
+				if (mark) jumpToMark(mark.key)
+				return
+			}
+			return
+		}
+
 		if (state.view === "settings") {
 			clearMarksStatus()
 			if (state.settings.editing) {
@@ -845,6 +962,12 @@ export function createEventHandlers({
 			event.preventDefault()
 			clearMarksStatus()
 			toggleStash()
+			return
+		}
+		if (event.key === "M") {
+			event.preventDefault()
+			clearMarksStatus()
+			toggleMarks()
 			return
 		}
 		if (event.key === "'") {

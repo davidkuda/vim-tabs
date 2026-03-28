@@ -65,6 +65,17 @@ export async function setMark(key, tab) {
 	return data.marks[markKey]
 }
 
+export async function deleteMark(key) {
+	if (!isValidMark(key)) return false
+
+	const data = await getMarksData()
+	if (!data.marks[key]) return false
+
+	delete data.marks[key]
+	await saveMarksData(data)
+	return true
+}
+
 async function focusTab(tab) {
 	if (!tab?.id) return false
 	try {
