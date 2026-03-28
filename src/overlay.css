@@ -330,6 +330,71 @@
 	color: rgba(246, 240, 234, 0.82);
 }
 
+.vtm-settings-view {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+	padding: 6px 2px 2px;
+}
+
+.vtm-settings-lane {
+	display: flex;
+	flex: 1 1 auto;
+	gap: 14px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+}
+
+.vtm-settings-title {
+	font-size: 2rem;
+}
+
+.vtm-settings-col {
+	min-width: 340px;
+	max-width: 420px;
+}
+
+.vtm-settings-card {
+	min-height: 56px;
+}
+
+.vtm-settings-draft {
+	border-style: dashed;
+	border-color: rgba(246, 193, 176, 0.36);
+	background: linear-gradient(
+		135deg,
+		rgba(215, 130, 126, 0.16),
+		rgba(40, 105, 131, 0.12)
+	);
+}
+
+.vtm-settings-empty {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.028);
+	border: 1px solid rgba(255, 255, 255, 0.045);
+	color: rgba(246, 240, 234, 0.62);
+}
+
+.vtm-settings-empty-title {
+	font-size: 13px;
+	font-weight: 500;
+	color: #f6f0ea;
+}
+
+.vtm-settings-empty-copy {
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.vtm-settings-empty-copy span {
+	color: rgba(246, 240, 234, 0.9);
+}
+
 .vtm-stash {
 	width: 100%;
 	display: flex;

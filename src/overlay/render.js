@@ -1,6 +1,14 @@
 import { getWindowColor } from "../shared/window-colors.js"
 
 export function createRenderer(state, columns, footer) {
+	function escapeHtml(text) {
+		return `${text || ""}`
+			.replaceAll("&", "&amp;")
+			.replaceAll("<", "&lt;")
+			.replaceAll(">", "&gt;")
+			.replaceAll('"', "&quot;")
+	}
+
 	function formatUrl(url) {
 		if (!url) return ""
 		try {
@@ -94,6 +102,21 @@ export function createRenderer(state, columns, footer) {
 		}
 	}
 
+	function highlightSettings() {
+		document
+			.querySelectorAll(".vtm-settings-card.vtm-selected")
+			.forEach((node) => node.classList.remove("vtm-selected"))
+
+		const current = document.querySelector(
+			`.vtm-settings-card[data-index="${state.settings.sel}"]`,
+		)
+
+		if (current) {
+			current.classList.add("vtm-selected")
+			current.scrollIntoView({ block: "nearest", inline: "nearest" })
+		}
+	}
+
 	function renderTabs() {
 		columns.innerHTML = ""
 
@@ -135,7 +158,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Press <code>/</code> to search tabs. Press <code>Esc</code> to apply.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Press <code>/</code> to search tabs. Press <code>:</code> for settings. Press <code>Esc</code> to apply.</div>
 		`
 	}
 
@@ -212,6 +235,7 @@ export function createRenderer(state, columns, footer) {
 
 		addGroup("Session", [
 			["u", "undo delete"],
+			[":", "open settings"],
 			["?", "toggle this help"],
 			["Esc", "apply changes and close"],
 		])
@@ -220,6 +244,7 @@ export function createRenderer(state, columns, footer) {
 			["X", "stash selected window"],
 			['"', "open stash inside overlay"],
 			["'", "open full stash page"],
+			[":", "open settings"],
 		])
 
 		help.appendChild(groups)
@@ -287,6 +312,7 @@ export function createRenderer(state, columns, footer) {
 			["Shift+Enter", "open in background"],
 			['"', "return to stash"],
 			["'", "open full stash page"],
+			[":", "open settings"],
 		])
 
 		help.appendChild(groups)
@@ -316,7 +342,7 @@ export function createRenderer(state, columns, footer) {
 			stash.appendChild(empty)
 			columns.appendChild(stash)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Press <code>"</code> to return to the tabs overview.</div>
+				<div class="vtm-footer-copy">Press <code>"</code> to return to the tabs overview. Press <code>:</code> for settings.</div>
 			`
 			return
 		}
@@ -391,7 +417,105 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page. Press <code>:</code> for settings.</div>
+		`
+	}
+
+	function renderSettings() {
+		columns.innerHTML = ""
+
+		const wrap = document.createElement("section")
+		wrap.className = "vtm-settings-view"
+
+		const hero = document.createElement("div")
+		hero.className = "vtm-help-hero"
+		hero.innerHTML = `
+			<h2 class="vtm-help-title vtm-settings-title">Excluded hostnames</h2>
+			<p class="vtm-help-copy">These domains are skipped when you stash a window. Matching is hostname-based, so excluding <code>openai.com</code> also excludes <code>chat.openai.com</code>.</p>
+		`
+		wrap.appendChild(hero)
+
+		const lane = document.createElement("div")
+		lane.className = "vtm-settings-lane"
+
+		const col = document.createElement("div")
+		col.className = "vtm-col vtm-settings-col"
+		col.style.borderColor = "rgba(255, 255, 255, 0.08)"
+		col.style.background =
+			"linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012)), rgba(42, 39, 63, 0.74)"
+
+		const header = document.createElement("div")
+		header.className = "vtm-col-header"
+		header.style.background = "#d7827e"
+		header.textContent = "Excluded Hostnames"
+		col.appendChild(header)
+
+		const domains = [...state.settings.excludedDomains]
+		const items = domains.map((domain) => ({
+			type: "domain",
+			title: domain,
+			subtitle: "Skipped during stashing",
+		}))
+
+		if (state.settings.editing) {
+			items.splice(state.settings.insertIndex, 0, {
+				type: "draft",
+				title: state.settings.draft || "Type a hostname",
+				subtitle: "Press Enter to save, Esc to cancel",
+			})
+		}
+
+		if (!items.length) {
+			const empty = document.createElement("div")
+			empty.className = "vtm-settings-empty"
+			empty.innerHTML = `
+				<div class="vtm-settings-empty-title">No exclusions yet</div>
+				<div class="vtm-settings-empty-copy">Press <code>o</code> or <code>O</code> to add a hostname like <span>gmail.com</span>.</div>
+				<div class="vtm-settings-empty-copy">Press <code>Enter</code> to save it and <code>:</code> to return to tabs.</div>
+			`
+			col.appendChild(empty)
+		} else {
+			items.forEach((item, index) => {
+				const card = document.createElement("div")
+				card.className = "vtm-card vtm-settings-card"
+				card.dataset.index = index
+
+				if (item.type === "draft") {
+					card.classList.add("vtm-settings-draft")
+				}
+
+				const meta = document.createElement("div")
+				meta.className = "vtm-meta"
+				meta.innerHTML = `
+					<span class="vtm-title">${escapeHtml(item.title)}</span>
+					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+				`
+				card.appendChild(meta)
+				col.appendChild(card)
+			})
+		}
+
+		lane.appendChild(col)
+		wrap.appendChild(lane)
+		columns.appendChild(wrap)
+		highlightSettings()
+
+		if (state.settings.status) {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">${escapeHtml(state.settings.status)}</div>
+			`
+			return
+		}
+
+		if (state.settings.editing) {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Editing hostname. Press <code>Enter</code> to save or <code>Esc</code> to cancel.</div>
+			`
+			return
+		}
+
+		footer.innerHTML = `
+			<div class="vtm-footer-copy">Press <code>o</code> or <code>O</code> to add a hostname, <code>d</code> to delete, <code>j</code> and <code>k</code> to move, and <code>:</code> to return to the tabs overview.</div>
 		`
 	}
 
@@ -425,6 +549,10 @@ export function createRenderer(state, columns, footer) {
 		}
 		if (state.view === "stashHelp") {
 			renderStashHelp()
+			return
+		}
+		if (state.view === "settings") {
+			renderSettings()
 			return
 		}
 		renderStash()

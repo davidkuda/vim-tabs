@@ -15,7 +15,12 @@ const copyStaticAssetsPlugin = {
 }
 
 const sharedConfig = {
-	entryPoints: ["src/background.js", "src/overlay.js", "src/stash.js"],
+	entryPoints: [
+		"src/background.js",
+		"src/overlay.js",
+		"src/stash.js",
+		"src/settings.js",
+	],
 	bundle: true,
 	format: "iife",
 	platform: "browser",
@@ -33,6 +38,8 @@ async function copyStaticAssets() {
 	await cp("src/preview.js", "dist/preview.js")
 	await cp("src/stash.html", "dist/stash.html")
 	await cp("src/stash.css", "dist/stash.css")
+	await cp("src/settings.html", "dist/settings.html")
+	await cp("src/settings.css", "dist/settings.css")
 	await cp("src/overlay.css", "dist/overlay.css")
 }
 
@@ -50,6 +57,8 @@ function watchStaticAssets() {
 		"src/preview.js",
 		"src/stash.html",
 		"src/stash.css",
+		"src/settings.html",
+		"src/settings.css",
 		"src/overlay.css",
 	]
 

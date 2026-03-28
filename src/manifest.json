@@ -5,6 +5,22 @@
 	"manifest_version": 3,
 	"permissions": ["tabs", "scripting", "bookmarks", "storage"],
 	"host_permissions": ["<all_urls>"],
+	"commands": {
+		"open-manager": {
+			"suggested_key": {
+				"default": "Ctrl+E",
+				"mac": "Command+E"
+			},
+			"description": "Open VimTabs"
+		},
+		"stash-window": {
+			"suggested_key": {
+				"default": "Ctrl+S",
+				"mac": "Command+S"
+			},
+			"description": "Stash current window"
+		}
+	},
 	"action": {
 		"default_title": "VimTabs"
 	},

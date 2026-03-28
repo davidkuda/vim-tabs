@@ -9,8 +9,39 @@ import {
 	showWindowPreviews,
 } from "./background/overlay.js"
 import { getPreviewSession } from "./background/session.js"
-import { openStashPage, stashWindow } from "./background/stash.js"
+import { openSettingsPage, openStashPage, stashWindow } from "./background/stash.js"
 import { getStashData } from "./shared/stash.js"
+
+async function getFocusedTab() {
+	const [tab] = await chrome.tabs.query({
+		active: true,
+		lastFocusedWindow: true,
+	})
+	return tab
+}
+
+async function launchOverlay(tab) {
+	if (!tab?.id || !tab.windowId) return
+
+	await clearOverlayArtifacts()
+
+	const { wins } = await getData()
+	let overlayHostTabId = tab.id
+
+	try {
+		await injectOverlay(tab.id)
+	} catch (error) {
+		const fallback = await openFallbackPage(tab)
+		overlayHostTabId = fallback.id
+	}
+
+	await showWindowPreviews(wins, tab.windowId)
+
+	try {
+		await chrome.windows.update(tab.windowId, { focused: true })
+		await chrome.tabs.update(overlayHostTabId, { active: true })
+	} catch {}
+}
 
 async function handleCommit(msg, senderTab) {
 	const session = await getPreviewSession()
@@ -44,24 +75,21 @@ async function clearOverlayArtifacts() {
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
-	await clearOverlayArtifacts()
+	await launchOverlay(tab)
+})
 
-	const { wins } = await getData()
-	let overlayHostTabId = tab.id
-
-	try {
-		await injectOverlay(tab.id)
-	} catch (error) {
-		const fallback = await openFallbackPage(tab)
-		overlayHostTabId = fallback.id
+chrome.commands.onCommand.addListener(async (command) => {
+	if (command === "open-manager") {
+		await launchOverlay(await getFocusedTab())
+		return
 	}
 
-	await showWindowPreviews(wins, tab.windowId)
-
-	try {
-		await chrome.windows.update(tab.windowId, { focused: true })
-		await chrome.tabs.update(overlayHostTabId, { active: true })
-	} catch {}
+	if (command === "stash-window") {
+		await clearOverlayArtifacts()
+		const tab = await getFocusedTab()
+		if (!tab?.windowId) return
+		await stashWindow(tab.windowId, tab)
+	}
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -81,6 +109,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "openStash") {
 		clearOverlayArtifacts().then(() => openStashPage(sender?.tab?.windowId))
+	}
+
+	if (msg.type === "openSettings") {
+		clearOverlayArtifacts().then(() => openSettingsPage(sender?.tab?.windowId))
 	}
 
 	if (msg.type === "openStashedTab") {

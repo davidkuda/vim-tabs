@@ -176,7 +176,7 @@
 			const matches = countMatches(state.search.lastQuery)
 			footer.innerHTML = `Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.`
 		} else {
-			footer.innerHTML = `Press <code>?</code> for stash help. Press <code>/</code> to search stashed tabs.`
+			footer.innerHTML = `Press <code>?</code> for stash help. Press <code>/</code> to search stashed tabs. Press <code>:</code> for settings.`
 		}
 		root.appendChild(footer)
 
@@ -215,6 +215,7 @@
 					<div class="vtm-stash-help-list">
 						<div class="vtm-stash-help-row"><code>Enter</code><span>open selected tab</span></div>
 						<div class="vtm-stash-help-row"><code>Shift+Enter</code><span>open in background</span></div>
+						<div class="vtm-stash-help-row"><code>:</code><span>open settings</span></div>
 						<div class="vtm-stash-help-row"><code>?</code><span>return to stash</span></div>
 					</div>
 				</section>
@@ -319,6 +320,11 @@
 		}
 
 		if (state.view === "help") {
+			if (event.key === ":") {
+				event.preventDefault()
+				chrome.runtime.sendMessage({ type: "openSettings" })
+				return
+			}
 			if (event.key === "?") {
 				event.preventDefault()
 				state.view = "stash"
@@ -346,6 +352,11 @@
 			event.preventDefault()
 			state.view = "help"
 			render()
+			return
+		}
+		if (event.key === ":") {
+			event.preventDefault()
+			chrome.runtime.sendMessage({ type: "openSettings" })
 			return
 		}
 		if (event.key === "Escape") {

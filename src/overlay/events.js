@@ -1,4 +1,5 @@
 import { curTab } from "./state.js"
+import { getSettings, normalizeDomain, saveSettings } from "../shared/settings.js"
 
 export function createEventHandlers({ backdrop, render, renderTabs, state, actions }) {
 	function collectMatches(query) {
@@ -151,6 +152,20 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		state.stash.sel.t = Math.max(0, Math.min(state.stash.sel.t, tabs.length - 1))
 	}
 
+	function clampSettingsSelection() {
+		const count =
+			state.settings.excludedDomains.length + (state.settings.editing ? 1 : 0)
+		state.settings.sel = Math.max(0, Math.min(state.settings.sel, count - 1))
+	}
+
+	async function persistSettings() {
+		await saveSettings({ excludedDomains: state.settings.excludedDomains })
+	}
+
+	function resetSettingsStatus() {
+		state.settings.status = ""
+	}
+
 	function detachListeners() {
 		window.removeEventListener("keydown", onKey, true)
 	}
@@ -219,6 +234,85 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		})
 	}
 
+	async function openSettings(view = state.view) {
+		resetSettingsStatus()
+		state.settings.editing = false
+		state.settings.draft = ""
+		state.settings.insertIndex = 0
+		state.settings.returnView = view === "settings" ? "tabs" : view
+		const settings = await getSettings()
+		state.settings.excludedDomains = settings.excludedDomains || []
+		clampSettingsSelection()
+		state.view = "settings"
+		render()
+	}
+
+	function leaveSettings() {
+		resetSettingsStatus()
+		state.settings.editing = false
+		state.settings.draft = ""
+		state.settings.insertIndex = 0
+		state.view = state.settings.returnView || "tabs"
+		render()
+	}
+
+	function startSettingsInsert(offset) {
+		resetSettingsStatus()
+		const baseIndex = state.settings.excludedDomains.length
+			? state.settings.sel + offset
+			: 0
+		state.settings.editing = true
+		state.settings.draft = ""
+		state.settings.insertIndex = Math.max(
+			0,
+			Math.min(baseIndex, state.settings.excludedDomains.length),
+		)
+		state.settings.sel = state.settings.insertIndex
+		render()
+	}
+
+	async function confirmSettingsInsert() {
+		const domain = normalizeDomain(state.settings.draft)
+		if (!domain) {
+			state.settings.status = "Enter a hostname like gmail.com."
+			render()
+			return
+		}
+
+		if (state.settings.excludedDomains.includes(domain)) {
+			state.settings.status = `${domain} is already excluded.`
+			render()
+			return
+		}
+
+		state.settings.excludedDomains.splice(state.settings.insertIndex, 0, domain)
+		state.settings.sel = state.settings.excludedDomains.indexOf(domain)
+		state.settings.editing = false
+		state.settings.draft = ""
+		state.settings.insertIndex = 0
+		state.settings.status = `Excluded ${domain} from future stashes.`
+		await persistSettings()
+		render()
+	}
+
+	function cancelSettingsInsert() {
+		resetSettingsStatus()
+		state.settings.editing = false
+		state.settings.draft = ""
+		state.settings.insertIndex = 0
+		clampSettingsSelection()
+		render()
+	}
+
+	async function deleteSelectedSetting() {
+		if (state.settings.editing || !state.settings.excludedDomains.length) return
+		const [removed] = state.settings.excludedDomains.splice(state.settings.sel, 1)
+		clampSettingsSelection()
+		state.settings.status = removed ? `Removed ${removed} from the exclusion list.` : ""
+		await persistSettings()
+		render()
+	}
+
 	function onKey(event) {
 		if (state.search.active) {
 			if (event.key === "Escape") {
@@ -244,6 +338,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		}
 
 		if (state.view === "help") {
+			if (event.key === ":") {
+				event.preventDefault()
+				openSettings("help")
+				return
+			}
 			if (event.key === "?") {
 				event.preventDefault()
 				toggleHelp()
@@ -252,6 +351,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		}
 
 		if (state.view === "stashHelp") {
+			if (event.key === ":") {
+				event.preventDefault()
+				openSettings("stashHelp")
+				return
+			}
 			if (event.key === "?") {
 				event.preventDefault()
 				state.view = "stash"
@@ -261,6 +365,11 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 		}
 
 		if (state.view === "stash") {
+			if (event.key === ":") {
+				event.preventDefault()
+				openSettings("stash")
+				return
+			}
 			if (event.key === "?") {
 				event.preventDefault()
 				state.view = "stashHelp"
@@ -358,9 +467,86 @@ export function createEventHandlers({ backdrop, render, renderTabs, state, actio
 			return
 		}
 
+		if (state.view === "settings") {
+			if (state.settings.editing) {
+				if (event.key === "Escape") {
+					event.preventDefault()
+					cancelSettingsInsert()
+					return
+				}
+				if (event.key === "Enter") {
+					event.preventDefault()
+					confirmSettingsInsert()
+					return
+				}
+				if (event.key === "Backspace") {
+					event.preventDefault()
+					state.settings.draft = state.settings.draft.slice(0, -1)
+					resetSettingsStatus()
+					render()
+					return
+				}
+				if (
+					event.key.length === 1 &&
+					!event.ctrlKey &&
+					!event.metaKey &&
+					!event.altKey
+				) {
+					event.preventDefault()
+					state.settings.draft += event.key
+					resetSettingsStatus()
+					render()
+				}
+				return
+			}
+
+			if (event.key === "Escape" || event.key === ":") {
+				event.preventDefault()
+				leaveSettings()
+				return
+			}
+			if (event.key === "j") {
+				event.preventDefault()
+				state.settings.sel = Math.min(
+					state.settings.sel + 1,
+					state.settings.excludedDomains.length - 1,
+				)
+				resetSettingsStatus()
+				render()
+				return
+			}
+			if (event.key === "k") {
+				event.preventDefault()
+				state.settings.sel = Math.max(state.settings.sel - 1, 0)
+				resetSettingsStatus()
+				render()
+				return
+			}
+			if (event.key === "o") {
+				event.preventDefault()
+				startSettingsInsert(1)
+				return
+			}
+			if (event.key === "O") {
+				event.preventDefault()
+				startSettingsInsert(0)
+				return
+			}
+			if (event.key === "d") {
+				event.preventDefault()
+				deleteSelectedSetting()
+			}
+			return
+		}
+
 		if (event.key === "?") {
 			event.preventDefault()
 			toggleHelp()
+			return
+		}
+		if (event.key === ":") {
+			event.preventDefault()
+			openSettings("tabs")
 			return
 		}
 		if (event.key === "/") {
