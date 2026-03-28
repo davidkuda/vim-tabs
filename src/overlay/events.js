@@ -1,7 +1,7 @@
 import { curTab } from "./state.js"
 import { getSettings, normalizeDomain, saveSettings } from "../shared/settings.js"
 
-const settingsColumnCounts = [() => 0, () => 5, () => 3]
+const settingsColumnCounts = [() => 0, () => 4, () => 5, () => 3]
 
 export function createEventHandlers({
 	backdrop,
@@ -12,11 +12,26 @@ export function createEventHandlers({
 	applyUiSettings,
 }) {
 	function compareMarks(a, b) {
-		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
-		if (usageDiff !== 0) return usageDiff
 		const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
-		if (recentDiff !== 0) return recentDiff
-		return a.key.localeCompare(b.key)
+		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
+		if (state.settings.quickMarkSort === "recent") {
+			if (recentDiff !== 0) return recentDiff
+			if (usageDiff !== 0) return usageDiff
+		} else {
+			if (usageDiff !== 0) return usageDiff
+			if (recentDiff !== 0) return recentDiff
+		}
+		return compareMarkKeys(a.key, b.key)
+	}
+
+	function compareMarkKeys(a, b) {
+		const foldedDiff = a.toLowerCase().localeCompare(b.toLowerCase())
+		if (foldedDiff !== 0) return foldedDiff
+		if (a === b) return 0
+		if (state.settings.markAlphaOrder === "capital-first") {
+			return a === a.toUpperCase() ? -1 : 1
+		}
+		return a === a.toLowerCase() ? -1 : 1
 	}
 
 	function clearMarksState() {
@@ -180,7 +195,7 @@ export function createEventHandlers({
 	}
 
 	function clampSettingsSelection() {
-		state.settings.sel.col = Math.max(0, Math.min(state.settings.sel.col, 2))
+		state.settings.sel.col = Math.max(0, Math.min(state.settings.sel.col, 3))
 		state.settings.sel.rows[0] = Math.max(
 			0,
 			Math.min(
@@ -196,6 +211,10 @@ export function createEventHandlers({
 			0,
 			Math.min(state.settings.sel.rows[2], settingsColumnCounts[2]() - 1),
 		)
+		state.settings.sel.rows[3] = Math.max(
+			0,
+			Math.min(state.settings.sel.rows[3], settingsColumnCounts[3]() - 1),
+		)
 	}
 
 	function getMarkColumns() {
@@ -203,11 +222,13 @@ export function createEventHandlers({
 		const sortMarks =
 			state.marks.mode === "quick"
 				? [...marks].sort(compareMarks)
-				: [...marks].sort((a, b) => a.key.localeCompare(b.key))
-		return [
-			sortMarks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
-			sortMarks.filter((mark) => mark.key === mark.key.toUpperCase()),
-		]
+				: [...marks].sort((a, b) => compareMarkKeys(a.key, b.key))
+		if (state.marks.mode === "quick") return [sortMarks, []]
+		const temporary = sortMarks.filter(
+			(mark) => mark.key === mark.key.toLowerCase() && mark.live,
+		)
+		const persistent = sortMarks.filter((mark) => mark.key === mark.key.toUpperCase())
+		return [temporary, persistent]
 	}
 
 	function currentSelectedMark() {
@@ -219,7 +240,8 @@ export function createEventHandlers({
 
 	function clampMarksSelection() {
 		const columns = getMarkColumns()
-		state.marks.sel.col = Math.max(0, Math.min(state.marks.sel.col, 1))
+		const maxCol = state.marks.mode === "quick" ? 0 : 1
+		state.marks.sel.col = Math.max(0, Math.min(state.marks.sel.col, maxCol))
 		state.marks.sel.rows[0] = Math.max(
 			0,
 			Math.min(state.marks.sel.rows[0], Math.max(columns[0].length - 1, 0)),
@@ -233,6 +255,8 @@ export function createEventHandlers({
 	async function persistSettings() {
 		await saveSettings({
 			excludedDomains: state.settings.excludedDomains,
+			quickMarkSort: state.settings.quickMarkSort,
+			markAlphaOrder: state.settings.markAlphaOrder,
 			density: state.settings.density,
 			labelSize: state.settings.labelSize,
 			theme: state.settings.theme,
@@ -264,6 +288,10 @@ export function createEventHandlers({
 
 	function resetSettingsStatus() {
 		state.settings.status = ""
+	}
+
+	function currentMarkTarget() {
+		return state.marks.targetTab || currentLiveTab()
 	}
 
 	function detachListeners() {
@@ -329,6 +357,30 @@ export function createEventHandlers({
 
 	function jumpToMark(key) {
 		closeAndSend({ type: "openMark", key })
+	}
+
+	function saveCurrentMark(persistent) {
+		const tab = currentMarkTarget()
+		const key = state.marks.draftKey
+		if (!tab?.id || !key) return
+
+		const markKey = persistent ? key.toUpperCase() : key.toLowerCase()
+		chrome.runtime.sendMessage(
+			{
+				type: "setMark",
+				key: markKey,
+				tab: {
+					id: tab.id,
+					windowId: tab.windowId,
+					title: tab.title,
+					url: tab.url,
+					favIconUrl: tab.favIconUrl,
+				},
+			},
+			() => {
+				commit(tab.id)
+			},
+		)
 	}
 
 	function openStashTab() {
@@ -398,12 +450,14 @@ export function createEventHandlers({
 		if (state.view === "marks") {
 			state.view = "tabs"
 			state.marks.mode = "browse"
+			state.marks.sel.col = 0
 			clampMarksSelection()
 			render()
 			return
 		}
 		state.view = "marks"
 		state.marks.mode = "browse"
+		state.marks.sel.col = 0
 		clampMarksSelection()
 		render()
 	}
@@ -446,6 +500,8 @@ export function createEventHandlers({
 		state.settings.returnView = view === "settings" ? "tabs" : view
 		const settings = await getSettings()
 		state.settings.excludedDomains = settings.excludedDomains || []
+		state.settings.quickMarkSort = settings.quickMarkSort
+		state.settings.markAlphaOrder = settings.markAlphaOrder
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize
 		state.settings.theme = settings.theme
@@ -535,19 +591,31 @@ export function createEventHandlers({
 		resetSettingsStatus()
 		if (state.settings.sel.col === 1) {
 			if (state.settings.sel.rows[1] < 2) {
-				state.settings.density =
-					state.settings.sel.rows[1] === 0 ? "comfortable" : "compact"
-				state.settings.status = `Density set to ${state.settings.density}.`
+				const sortMap = ["recent", "frequent"]
+				state.settings.quickMarkSort = sortMap[state.settings.sel.rows[1]]
+				state.settings.status = `Quick marks set to ${state.settings.quickMarkSort} first.`
 			} else {
-				const sizeMap = ["small", "medium", "large"]
-				state.settings.labelSize = sizeMap[state.settings.sel.rows[1] - 2]
-				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
+				const alphaMap = ["small-first", "capital-first"]
+				state.settings.markAlphaOrder = alphaMap[state.settings.sel.rows[1] - 2]
+				state.settings.status = `Alphabetical mark order set to ${state.settings.markAlphaOrder}.`
 			}
 		}
 
 		if (state.settings.sel.col === 2) {
+			if (state.settings.sel.rows[2] < 2) {
+				state.settings.density =
+					state.settings.sel.rows[2] === 0 ? "comfortable" : "compact"
+				state.settings.status = `Density set to ${state.settings.density}.`
+			} else {
+				const sizeMap = ["small", "medium", "large"]
+				state.settings.labelSize = sizeMap[state.settings.sel.rows[2] - 2]
+				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
+			}
+		}
+
+		if (state.settings.sel.col === 3) {
 			const themeMap = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
-			state.settings.theme = themeMap[state.settings.sel.rows[2]]
+			state.settings.theme = themeMap[state.settings.sel.rows[3]]
 			state.settings.status = `Theme set to ${state.settings.theme.replaceAll("-", " ")}.`
 		}
 
@@ -595,8 +663,10 @@ export function createEventHandlers({
 		}
 
 		if (
+			state.view !== "mark-create" &&
 			!state.settings.editing &&
 			!state.search.active &&
+			!(state.view === "marks" && state.marks.mode === "quick") &&
 			["?", ":", '"', "M"].includes(event.key)
 		) {
 			event.preventDefault()
@@ -749,6 +819,7 @@ export function createEventHandlers({
 				return
 			}
 			if (event.key === "'") {
+				if (quickMode) return
 				event.preventDefault()
 				startMarkMode("jump")
 				return
@@ -758,7 +829,24 @@ export function createEventHandlers({
 				jumpToMark(event.key)
 				return
 			}
+			if (quickMode && event.ctrlKey && event.key === "n") {
+				event.preventDefault()
+				const columns = getMarkColumns()
+				state.marks.sel.rows[0] = Math.min(
+					state.marks.sel.rows[0] + 1,
+					Math.max(columns[0].length - 1, 0),
+				)
+				render()
+				return
+			}
+			if (quickMode && event.ctrlKey && event.key === "p") {
+				event.preventDefault()
+				state.marks.sel.rows[0] = Math.max(state.marks.sel.rows[0] - 1, 0)
+				render()
+				return
+			}
 			if (event.key === "d") {
+				if (quickMode) return
 				event.preventDefault()
 				const mark = currentSelectedMark()
 				if (!mark) return
@@ -787,12 +875,14 @@ export function createEventHandlers({
 				return
 			}
 			if (event.key === "h") {
+				if (quickMode) return
 				event.preventDefault()
 				state.marks.sel.col = Math.max(state.marks.sel.col - 1, 0)
 				render()
 				return
 			}
 			if (event.key === "l") {
+				if (quickMode) return
 				event.preventDefault()
 				state.marks.sel.col = Math.min(state.marks.sel.col + 1, 1)
 				render()
@@ -805,6 +895,32 @@ export function createEventHandlers({
 					columns[state.marks.sel.col][state.marks.sel.rows[state.marks.sel.col]]
 				if (mark) jumpToMark(mark.key)
 				return
+			}
+			return
+		}
+
+		if (state.view === "mark-create") {
+			if (event.key === "Escape") {
+				event.preventDefault()
+				commit(state.marks.targetTab?.id)
+				return
+			}
+			if (event.key === "Backspace") {
+				event.preventDefault()
+				state.marks.draftKey = ""
+				render()
+				return
+			}
+			if (event.key === "Enter") {
+				event.preventDefault()
+				if (!state.marks.draftKey) return
+				saveCurrentMark(event.shiftKey)
+				return
+			}
+			if (isMarkKey(event.key)) {
+				event.preventDefault()
+				state.marks.draftKey = event.key.toLowerCase()
+				render()
 			}
 			return
 		}
@@ -880,7 +996,7 @@ export function createEventHandlers({
 			}
 			if (event.key === "l") {
 				event.preventDefault()
-				state.settings.sel.col = Math.min(state.settings.sel.col + 1, 2)
+				state.settings.sel.col = Math.min(state.settings.sel.col + 1, 3)
 				resetSettingsStatus()
 				render()
 				return

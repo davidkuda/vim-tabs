@@ -29,6 +29,7 @@ async function launchOverlay(tab, options = {}) {
 		overlayContext: {
 			initialView: options.initialView || "tabs",
 			initialMarksMode: options.initialMarksMode || "browse",
+			markTarget: options.markTarget || null,
 		},
 	})
 
@@ -106,6 +107,21 @@ chrome.commands.onCommand.addListener(async (command) => {
 		})
 		return
 	}
+
+	if (command === "add-current-mark") {
+		const tab = await getFocusedTab()
+		if (!tab) return
+		await launchOverlay(tab, {
+			initialView: "mark-create",
+			markTarget: {
+				id: tab.id,
+				windowId: tab.windowId,
+				title: tab.title,
+				url: tab.url,
+				favIconUrl: tab.favIconUrl,
+			},
+		})
+	}
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -126,6 +142,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 				data.overlayContext || {
 					initialView: "tabs",
 					initialMarksMode: "browse",
+					markTarget: null,
 				},
 			)
 		})

@@ -3,12 +3,16 @@ const SETTINGS_KEY = "settingsData"
 export const SETTING_DENSITIES = ["comfortable", "compact"]
 export const SETTING_LABEL_SIZES = ["small", "medium", "large"]
 export const SETTING_THEMES = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
+export const SETTING_QUICK_MARK_SORTS = ["recent", "frequent"]
+export const SETTING_MARK_ALPHA_ORDERS = ["small-first", "capital-first"]
 
 export const DEFAULT_SETTINGS = {
 	excludedDomains: [],
 	density: "comfortable",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
+	quickMarkSort: "frequent",
+	markAlphaOrder: "small-first",
 }
 
 export async function getSettings() {
@@ -32,6 +36,12 @@ export async function saveSettings(settings) {
 			theme: SETTING_THEMES.includes(settings.theme)
 				? settings.theme
 				: DEFAULT_SETTINGS.theme,
+			quickMarkSort: SETTING_QUICK_MARK_SORTS.includes(settings.quickMarkSort)
+				? settings.quickMarkSort
+				: DEFAULT_SETTINGS.quickMarkSort,
+			markAlphaOrder: SETTING_MARK_ALPHA_ORDERS.includes(settings.markAlphaOrder)
+				? settings.markAlphaOrder
+				: DEFAULT_SETTINGS.markAlphaOrder,
 		},
 	})
 }

@@ -57,10 +57,14 @@ if (!document.getElementById("vtm-backdrop")) {
 	]).then(([resp, overlayContext, marksData, settings]) => {
 		state.marks.items = marksData.marks || {}
 		state.marks.mode = overlayContext?.initialMarksMode || "browse"
+		state.marks.targetTab = overlayContext?.markTarget || null
+		state.marks.draftKey = ""
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize
 		state.settings.theme = settings.theme
+		state.settings.quickMarkSort = settings.quickMarkSort
+		state.settings.markAlphaOrder = settings.markAlphaOrder
 
 		state.wins = resp.wins
 		state.sel = resp.activeSel

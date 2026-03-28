@@ -26,6 +26,13 @@
 				"mac": "Command+Shift+M"
 			},
 			"description": "Open marks"
+		},
+		"add-current-mark": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+Y",
+				"mac": "Command+Shift+Y"
+			},
+			"description": "Mark current page"
 		}
 	},
 	"action": {

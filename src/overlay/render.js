@@ -50,7 +50,46 @@ const themeOptions = [
 	},
 ]
 
+const quickMarkSortOptions = [
+	{
+		value: "recent",
+		title: "Most recent first",
+		subtitle: "Prioritize marks used most recently",
+	},
+	{
+		value: "frequent",
+		title: "Most frequent first",
+		subtitle: "Prioritize marks used most often",
+	},
+]
+
+const markAlphaOrderOptions = [
+	{
+		value: "small-first",
+		title: "Lowercase first",
+		subtitle: "Sort a-z before A-Z",
+	},
+	{
+		value: "capital-first",
+		title: "Uppercase first",
+		subtitle: "Sort A-Z before a-z",
+	},
+]
+
 export function createRenderer(state, columns, footer) {
+	function applyShellMode() {
+		const backdrop = document.getElementById("vtm-backdrop")
+		const modal = document.getElementById("vtm-modal")
+		const topbar = document.getElementById("vtm-topbar")
+		const minimal =
+			state.view === "mark-create" ||
+			(state.view === "marks" && state.marks.mode === "quick")
+
+		backdrop?.classList.toggle("vtm-minimal-mode", minimal)
+		modal?.classList.toggle("vtm-minimal-mode", minimal)
+		topbar?.classList.toggle("vtm-hidden", minimal)
+	}
+
 	function renderFooterNav(activeView = "", extra = "") {
 		const extraHtml = extra ? `<div class="vtm-footer-copy">${extra}</div>` : ""
 		const item = (key, label, view) => `
@@ -71,11 +110,26 @@ export function createRenderer(state, columns, footer) {
 	}
 
 	function compareMarks(a, b) {
-		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
-		if (usageDiff !== 0) return usageDiff
 		const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
-		if (recentDiff !== 0) return recentDiff
-		return a.key.localeCompare(b.key)
+		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
+		if (state.settings.quickMarkSort === "recent") {
+			if (recentDiff !== 0) return recentDiff
+			if (usageDiff !== 0) return usageDiff
+		} else {
+			if (usageDiff !== 0) return usageDiff
+			if (recentDiff !== 0) return recentDiff
+		}
+		return compareMarkKeys(a.key, b.key)
+	}
+
+	function compareMarkKeys(a, b) {
+		const foldedDiff = a.toLowerCase().localeCompare(b.toLowerCase())
+		if (foldedDiff !== 0) return foldedDiff
+		if (a === b) return 0
+		if (state.settings.markAlphaOrder === "capital-first") {
+			return a === a.toUpperCase() ? -1 : 1
+		}
+		return a === a.toLowerCase() ? -1 : 1
 	}
 
 	function getMarkColumns() {
@@ -83,7 +137,8 @@ export function createRenderer(state, columns, footer) {
 		const sortMarks =
 			state.marks.mode === "quick"
 				? [...marks].sort(compareMarks)
-				: [...marks].sort((a, b) => a.key.localeCompare(b.key))
+				: [...marks].sort((a, b) => compareMarkKeys(a.key, b.key))
+		if (state.marks.mode === "quick") return [sortMarks, []]
 		return [
 			sortMarks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
 			sortMarks.filter((mark) => mark.key === mark.key.toUpperCase()),
@@ -159,7 +214,7 @@ export function createRenderer(state, columns, footer) {
 		if (!tab?.id) return []
 		return Object.values(state.marks.items || {})
 			.filter((mark) => mark.tabId === tab.id)
-			.sort((a, b) => a.key.localeCompare(b.key))
+			.sort((a, b) => compareMarkKeys(a.key, b.key))
 	}
 
 	function buildCard(tab, wi, ti) {
@@ -482,6 +537,7 @@ export function createRenderer(state, columns, footer) {
 			addGroup(groups, "Using Marks", [
 				["M", "open marks inside the overlay"],
 				["browser marks shortcut", "open quick marks ranked by use and recency"],
+				["browser add-mark shortcut", "add the current page as a mark"],
 				["j / k", "move within the current marks column"],
 				["h / l", "move between temporary and persistent marks"],
 				["' letter", "jump directly to a mark"],
@@ -490,7 +546,8 @@ export function createRenderer(state, columns, footer) {
 			explainer.innerHTML = `
 				<p><strong>Temporary marks:</strong> lowercase marks point to currently open tabs.</p>
 				<p><strong>Persistent marks:</strong> uppercase marks stay available and can reopen a tab by URL if the original tab no longer exists.</p>
-				<p><strong>Quick marks:</strong> opening marks from the browser shortcut shows the same marks view, but sorted by how often and how recently each mark was used. In that mode, typing the mark letter opens it immediately.</p>
+				<p><strong>Quick marks:</strong> opening marks from the browser shortcut shows a minimal ranked list. In that mode, typing the mark letter opens it immediately.</p>
+				<p><strong>Add mark:</strong> the browser add-mark shortcut opens a small prompt for the current page. Press <code>Enter</code> to save a temporary mark or <code>Shift+Enter</code> to save a persistent mark.</p>
 			`
 		}
 
@@ -704,7 +761,41 @@ export function createRenderer(state, columns, footer) {
 			})
 		}
 
-		const layoutColumn = createColumn("Layout", "#286983", 1)
+		const quickMarksColumn = createColumn("Quick Marks", "#286983", 1)
+		quickMarkSortOptions.forEach((item, index) => {
+			const card = document.createElement("div")
+			card.className = "vtm-card vtm-settings-card"
+			card.dataset.col = "1"
+			card.dataset.row = `${index}`
+			if (state.settings.quickMarkSort === item.value) {
+				card.classList.add("vtm-settings-active")
+			}
+			card.innerHTML = `
+				<div class="vtm-meta">
+					<span class="vtm-title">${escapeHtml(item.title)}</span>
+					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+				</div>
+			`
+			quickMarksColumn.appendChild(card)
+		})
+		markAlphaOrderOptions.forEach((item, index) => {
+			const card = document.createElement("div")
+			card.className = "vtm-card vtm-settings-card"
+			card.dataset.col = "1"
+			card.dataset.row = `${index + quickMarkSortOptions.length}`
+			if (state.settings.markAlphaOrder === item.value) {
+				card.classList.add("vtm-settings-active")
+			}
+			card.innerHTML = `
+				<div class="vtm-meta">
+					<span class="vtm-title">${escapeHtml(item.title)}</span>
+					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+				</div>
+			`
+			quickMarksColumn.appendChild(card)
+		})
+
+		const layoutColumn = createColumn("Layout", "#56949f", 2)
 		const layoutCards = [
 			...layoutOptions.density.map((option) => ({
 				...option,
@@ -719,7 +810,7 @@ export function createRenderer(state, columns, footer) {
 		layoutCards.forEach((item, index) => {
 			const card = document.createElement("div")
 			card.className = "vtm-card vtm-settings-card"
-			card.dataset.col = "1"
+			card.dataset.col = "2"
 			card.dataset.row = `${index}`
 			if (item.active) card.classList.add("vtm-settings-active")
 			card.innerHTML = `
@@ -731,11 +822,11 @@ export function createRenderer(state, columns, footer) {
 			layoutColumn.appendChild(card)
 		})
 
-		const themeColumn = createColumn("Theme", "#907aa9", 2)
+		const themeColumn = createColumn("Theme", "#907aa9", 3)
 		themeOptions.forEach((item, index) => {
 			const card = document.createElement("div")
 			card.className = "vtm-card vtm-settings-card"
-			card.dataset.col = "2"
+			card.dataset.col = "3"
 			card.dataset.row = `${index}`
 			if (state.settings.theme === item.value) {
 				card.classList.add("vtm-settings-active")
@@ -775,6 +866,87 @@ export function createRenderer(state, columns, footer) {
 	function renderMarks() {
 		columns.innerHTML = ""
 		const quickMode = state.marks.mode === "quick"
+		const markColumns = getMarkColumns()
+		const quickMarks = [...markColumns[0], ...markColumns[1]]
+
+		if (quickMode) {
+			const quickView = document.createElement("section")
+			quickView.className = "vtm-quick-marks"
+
+			const hero = document.createElement("div")
+			hero.className = "vtm-quick-marks-hero"
+			hero.innerHTML = `
+				<h2 class="vtm-help-title vtm-settings-title">Quick Marks</h2>
+				<p class="vtm-help-copy">Press a letter to open the tab.</p>
+			`
+			quickView.appendChild(hero)
+
+			const list = document.createElement("div")
+			list.className = "vtm-quick-marks-list"
+
+			if (!quickMarks.length) {
+				const empty = document.createElement("div")
+				empty.className = "vtm-card vtm-settings-card vtm-settings-empty vtm-mark-card"
+				empty.dataset.col = "0"
+				empty.dataset.row = "0"
+				empty.innerHTML = `
+					<div class="vtm-settings-empty-title">No marks yet.</div>
+					<div class="vtm-settings-empty-copy">Use <code>m</code> plus a letter from the tabs overview to create one.</div>
+				`
+				list.appendChild(empty)
+			} else {
+				quickMarks.forEach((mark, rowIndex) => {
+					const card = document.createElement("div")
+					card.className =
+						"vtm-card vtm-settings-card vtm-mark-card vtm-quick-mark-card"
+					card.dataset.col = "0"
+					card.dataset.row = `${rowIndex}`
+
+					const key = document.createElement("span")
+					key.className = "vtm-mark-badge"
+					key.textContent = mark.key
+
+					const meta = document.createElement("div")
+					meta.className = "vtm-meta"
+
+					const head = document.createElement("div")
+					head.className = "vtm-title-row"
+					const title = document.createElement("span")
+					title.className = "vtm-title"
+					title.textContent = mark.title || mark.url
+					head.append(title, key)
+
+					const url = document.createElement("span")
+					url.className = "vtm-url"
+					const usageCount = mark.usageCount || 0
+					const usageLabel =
+						usageCount > 0
+							? `${usageCount} use${usageCount === 1 ? "" : "s"}`
+							: "Unused"
+					url.textContent = `${formatUrl(mark.url)} · ${usageLabel} · ${formatRelativeTime(mark.lastUsedAt)}`
+
+					meta.append(head, url)
+					card.appendChild(meta)
+					list.appendChild(card)
+				})
+			}
+
+			quickView.appendChild(list)
+			columns.appendChild(quickView)
+			highlightMarks()
+
+			if (state.marks.status) {
+				footer.innerHTML = `
+					<div class="vtm-footer-copy">${state.marks.status}</div>
+				`
+				return
+			}
+
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Use <code>Ctrl+N</code> and <code>Ctrl+P</code> or <code>j</code> and <code>k</code> to move. Press <code>Enter</code> to open the selected mark. Press <code>Esc</code> to exit.</div>
+			`
+			return
+		}
 
 		const marksView = document.createElement("section")
 		marksView.className = "vtm-settings-view"
@@ -786,8 +958,6 @@ export function createRenderer(state, columns, footer) {
 
 		const lane = document.createElement("div")
 		lane.className = "vtm-settings-lane"
-
-		const markColumns = getMarkColumns()
 		const titles = ["Temporary Marks", "Persistent Marks"]
 		const accents = ["#286983", "#907aa9"]
 		const emptyCopy = [
@@ -877,6 +1047,68 @@ export function createRenderer(state, columns, footer) {
 		`
 	}
 
+	function renderMarkCreate() {
+		columns.innerHTML = ""
+
+		const targetTab =
+			state.marks.targetTab || state.wins[state.sel.w]?.tabs[state.sel.t] || null
+
+		const wrap = document.createElement("section")
+		wrap.className = "vtm-quick-marks"
+
+		const hero = document.createElement("div")
+		hero.className = "vtm-quick-marks-hero"
+		hero.innerHTML = `
+			<h2 class="vtm-help-title vtm-settings-title">Add Mark</h2>
+			<p class="vtm-help-copy">Type a letter, then press <code>Enter</code> for a temporary mark or <code>Shift+Enter</code> for a persistent mark.</p>
+		`
+		wrap.appendChild(hero)
+
+		const prompt = document.createElement("div")
+		prompt.className = "vtm-mark-create-prompt"
+		prompt.innerHTML = `
+			<div class="vtm-mark-create-label">Mark</div>
+			<div class="vtm-mark-create-key">${escapeHtml(state.marks.draftKey || "_")}</div>
+		`
+		wrap.appendChild(prompt)
+
+		if (targetTab) {
+			const card = document.createElement("div")
+			card.className = "vtm-card vtm-settings-card vtm-quick-mark-card"
+
+			const meta = document.createElement("div")
+			meta.className = "vtm-meta"
+
+			const titleRow = document.createElement("div")
+			titleRow.className = "vtm-title-row"
+
+			const title = document.createElement("span")
+			title.className = "vtm-title"
+			title.textContent = targetTab.title || targetTab.url || "Current tab"
+
+			titleRow.appendChild(title)
+
+			const url = document.createElement("span")
+			url.className = "vtm-url"
+			url.textContent = formatUrl(targetTab.url)
+
+			meta.append(titleRow, url)
+			card.appendChild(meta)
+			wrap.appendChild(card)
+		}
+
+		columns.appendChild(wrap)
+
+		if (state.marks.status) {
+			footer.innerHTML = `<div class="vtm-footer-copy">${state.marks.status}</div>`
+			return
+		}
+
+		footer.innerHTML = `
+			<div class="vtm-footer-copy">Press <code>Backspace</code> to clear the letter. Press <code>Esc</code> to cancel.</div>
+		`
+	}
+
 	function countMatches(query) {
 		if (!query) return 0
 		let count = 0
@@ -897,6 +1129,7 @@ export function createRenderer(state, columns, footer) {
 	}
 
 	function render() {
+		applyShellMode()
 		if (state.view === "tabs") {
 			renderTabs()
 			return
@@ -911,6 +1144,10 @@ export function createRenderer(state, columns, footer) {
 		}
 		if (state.view === "marks") {
 			renderMarks()
+			return
+		}
+		if (state.view === "mark-create") {
+			renderMarkCreate()
 			return
 		}
 		renderStash()
