@@ -85,6 +85,13 @@ export function createRenderer(state, columns, footer) {
 		return haystack.includes(query.toLowerCase())
 	}
 
+	function getTabMarks(tab) {
+		if (!tab?.id) return []
+		return Object.values(state.marks.items || {})
+			.filter((mark) => mark.tabId === tab.id)
+			.sort((a, b) => a.key.localeCompare(b.key))
+	}
+
 	function buildCard(tab, wi, ti) {
 		const card = document.createElement("div")
 		card.className = "vtm-card"
@@ -108,15 +115,32 @@ export function createRenderer(state, columns, footer) {
 		const meta = document.createElement("div")
 		meta.className = "vtm-meta"
 
+		const head = document.createElement("div")
+		head.className = "vtm-title-row"
+
 		const title = document.createElement("span")
 		title.className = "vtm-title"
 		title.textContent = tab.title || tab.url
+		head.appendChild(title)
+
+		const marks = getTabMarks(tab)
+		if (marks.length) {
+			const badges = document.createElement("div")
+			badges.className = "vtm-mark-badges"
+			marks.forEach((mark) => {
+				const badge = document.createElement("span")
+				badge.className = "vtm-mark-badge"
+				badge.textContent = mark.key
+				badges.appendChild(badge)
+			})
+			head.appendChild(badges)
+		}
 
 		const url = document.createElement("span")
 		url.className = "vtm-url"
 		url.textContent = formatUrl(tab.url)
 
-		meta.append(title, url)
+		meta.append(head, url)
 		card.appendChild(meta)
 
 		return card
@@ -191,6 +215,27 @@ export function createRenderer(state, columns, footer) {
 		})
 
 		highlight()
+		if (state.marks.pending === "set") {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Mark the selected tab with <code>a-z</code> or <code>A-Z</code>. Uppercase marks persist. Press <code>Esc</code> to cancel.</div>
+			`
+			return
+		}
+
+		if (state.marks.pending === "jump") {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">Jump to a mark with <code>a-z</code> or <code>A-Z</code>. Press <code>Esc</code> to cancel.</div>
+			`
+			return
+		}
+
+		if (state.marks.status) {
+			footer.innerHTML = `
+				<div class="vtm-footer-copy">${state.marks.status}</div>
+			`
+			return
+		}
+
 		if (state.search.active) {
 			const matches = countMatches(state.search.query)
 			footer.innerHTML = `
@@ -232,8 +277,8 @@ export function createRenderer(state, columns, footer) {
 		const hero = document.createElement("div")
 		hero.className = "vtm-help-hero"
 		hero.innerHTML = `
-			<h2 class="vtm-help-title">Move fast across windows and tabs</h2>
-			<p class="vtm-help-copy">Everything here stays keyboard-first. Cut, move, duplicate, bookmark, and focus tabs without leaving the overlay.</p>
+			<h2 class="vtm-help-title">Tabs Overview</h2>
+			<p class="vtm-help-copy">The overlay shows every open window as a column. You move through it with the keyboard, stage changes, and apply them when you leave the overlay.</p>
 		`
 		help.appendChild(hero)
 
@@ -263,7 +308,7 @@ export function createRenderer(state, columns, footer) {
 			groups.appendChild(section)
 		}
 
-		addGroup("Move", [
+		addGroup("Navigate", [
 			["j / k", "move through tabs"],
 			["J / K", "jump 5 tabs"],
 			["h / l", "move between windows"],
@@ -271,25 +316,27 @@ export function createRenderer(state, columns, footer) {
 			["Enter", "focus the selected tab"],
 		])
 
-		addGroup("Find", [
+		addGroup("Search", [
 			["/ query", "search titles and URLs"],
 			["n / N", "jump between matches"],
-			["?", "open or close help"],
-			[":", "open settings"],
 		])
 
-		addGroup("Shape", [
-			["d", "cut tab"],
-			["y", "copy tab"],
+		addGroup("Edit", [
+			["d", "queue the selected tab for deletion"],
+			["u", "undo the most recent queued delete"],
+			["y", "yank the selected tab into a temporary register"],
 			["p / P", "paste below or above"],
-			["u", "undo delete"],
 			["b", "bookmark tab"],
 		])
 
-		addGroup("Stash", [
-			["X", "stash the current window"],
+		addGroup("Marks And Stash", [
+			["m letter", "mark the selected tab"],
+			["' letter", "jump to a mark"],
 			['"', "browse the stash in overlay"],
-			["'", "open the full stash page"],
+			["X", "stash the current window"],
+			[";", "open the full stash page"],
+			[":", "open settings"],
+			["?", "open or close help"],
 			["Esc", "apply changes and close"],
 		])
 
@@ -298,7 +345,11 @@ export function createRenderer(state, columns, footer) {
 		const explainer = document.createElement("div")
 		explainer.className = "vtm-help-explainer"
 		explainer.innerHTML = `
-			<p>VimTabs is a keyboard-first tab manager for moving across windows, reshaping tab order, and stashing whole browsing sessions without leaving the current page. The overlay lets you inspect everything at once, make a batch of changes, and apply them only when you close it.</p>
+			<p><strong>Queued deletes:</strong> pressing <code>d</code> does not close the tab immediately. It marks that tab for deletion inside the overlay. The actual close happens when you leave the overlay with <code>Esc</code> or open a tab with <code>Enter</code>. Use <code>u</code> if you want to undo the most recent queued delete before applying.</p>
+			<p><strong>Yank and paste:</strong> pressing <code>y</code> stores the selected tab as a temporary entry. Use <code>p</code> or <code>P</code> to insert a copy of that tab below or above the current position, including into another window column.</p>
+			<p><strong>Marks:</strong> pressing <code>m</code> followed by a letter assigns that letter to the selected tab. Press <code>'</code> followed by the same letter to jump back to it. Uppercase marks persist and can reopen a tab by URL if the original tab no longer exists.</p>
+			<p><strong>Stashing:</strong> pressing <code>X</code> stores all tabs from the current window as one stashed session and closes them from that window. The stash is meant for sessions you want to get out of the way without losing. Use <code>"</code> to inspect the stash inside the overlay or <code>;</code> to open the standalone stash page.</p>
+			<p><strong>Apply model:</strong> most structural changes in the tabs overview are staged first. This lets you inspect the result before committing it. Focusing a tab with <code>Enter</code> or leaving with <code>Esc</code> applies the queued changes.</p>
 		`
 		help.appendChild(explainer)
 
@@ -317,8 +368,8 @@ export function createRenderer(state, columns, footer) {
 		const hero = document.createElement("div")
 		hero.className = "vtm-help-hero"
 		hero.innerHTML = `
-			<h2 class="vtm-help-title">Browse stashed sessions like tabs</h2>
-			<p class="vtm-help-copy">Each column is one stashed window session. Search, move, and reopen tabs without leaving the keyboard.</p>
+			<h2 class="vtm-help-title">Stash</h2>
+			<p class="vtm-help-copy">Each column is one previously stashed window. Stashing stores the tabs from a window as a session so the window can be cleared without losing those tabs.</p>
 		`
 		help.appendChild(hero)
 
@@ -365,7 +416,7 @@ export function createRenderer(state, columns, footer) {
 			["Enter", "open selected tab"],
 			["Shift+Enter", "open in background"],
 			['"', "return to stash"],
-			["'", "open full stash page"],
+			[";", "open full stash page"],
 			[":", "open settings"],
 		])
 
@@ -471,7 +522,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>'</code> to open the full stash page. Press <code>:</code> for settings.</div>
+			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>;</code> to open the full stash page. Press <code>:</code> for settings.</div>
 		`
 	}
 

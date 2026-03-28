@@ -6,6 +6,11 @@ export function createState() {
 			sessions: [],
 			sel: { s: 0, t: 0 },
 		},
+		marks: {
+			items: {},
+			pending: null,
+			status: "",
+		},
 		settings: {
 			excludedDomains: [],
 			sel: { col: 0, rows: [0, 0, 0] },

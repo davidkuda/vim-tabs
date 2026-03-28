@@ -19,6 +19,13 @@
 				"mac": "Command+S"
 			},
 			"description": "Stash current window"
+		},
+		"open-marks": {
+			"suggested_key": {
+				"default": "Ctrl+M",
+				"mac": "Command+Shift+M"
+			},
+			"description": "Open marks"
 		}
 	},
 	"action": {

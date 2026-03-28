@@ -11,6 +11,15 @@ export function createEventHandlers({
 	actions,
 	applyUiSettings,
 }) {
+	function clearMarksState() {
+		state.marks.pending = null
+		state.marks.status = ""
+	}
+
+	function clearMarksStatus() {
+		state.marks.status = ""
+	}
+
 	function collectMatches(query) {
 		if (!query) return []
 
@@ -50,6 +59,7 @@ export function createEventHandlers({
 	}
 
 	function startSearch() {
+		clearMarksState()
 		state.search.active = true
 		state.search.query = ""
 		state.search.originSel = { ...state.sel }
@@ -211,6 +221,51 @@ export function createEventHandlers({
 		detachListeners()
 		backdrop.remove()
 		chrome.runtime.sendMessage(message)
+	}
+
+	function currentLiveTab() {
+		return state.wins[state.sel.w]?.tabs[state.sel.t]
+	}
+
+	function isMarkKey(key) {
+		return /^[a-zA-Z]$/.test(key || "")
+	}
+
+	function startMarkMode(mode) {
+		state.marks.pending = mode
+		clearMarksStatus()
+		renderTabs()
+	}
+
+	function setMark(key) {
+		const tab = currentLiveTab()
+		if (!tab?.id || tab._temp) return
+
+		chrome.runtime.sendMessage(
+			{
+				type: "setMark",
+				key,
+				tab: {
+					id: tab.id,
+					windowId: state.wins[state.sel.w].id,
+					title: tab.title,
+					url: tab.url,
+					favIconUrl: tab.favIconUrl,
+				},
+			},
+			() => {
+				chrome.runtime.sendMessage({ type: "getMarksData" }, (marksData) => {
+					state.marks.items = marksData.marks || {}
+					state.marks.pending = null
+					state.marks.status = `Marked this tab as <code>${key}</code>.`
+					renderTabs()
+				})
+			},
+		)
+	}
+
+	function jumpToMark(key) {
+		closeAndSend({ type: "openMark", key })
 	}
 
 	function openStashTab() {
@@ -386,6 +441,20 @@ export function createEventHandlers({
 	}
 
 	function onKey(event) {
+		if (state.marks.pending) {
+			if (event.key === "Escape") {
+				event.preventDefault()
+				clearMarksState()
+				renderTabs()
+				return
+			}
+			if (isMarkKey(event.key)) {
+				event.preventDefault()
+				state.marks.pending === "set" ? setMark(event.key) : jumpToMark(event.key)
+			}
+			return
+		}
+
 		if (state.search.active) {
 			if (event.key === "Escape") {
 				event.preventDefault()
@@ -410,6 +479,7 @@ export function createEventHandlers({
 		}
 
 		if (state.view === "help") {
+			clearMarksStatus()
 			if (event.key === ":") {
 				event.preventDefault()
 				openSettings("help")
@@ -443,6 +513,7 @@ export function createEventHandlers({
 		}
 
 		if (state.view === "stashHelp") {
+			clearMarksStatus()
 			if (event.key === ":") {
 				event.preventDefault()
 				openSettings("stashHelp")
@@ -477,6 +548,7 @@ export function createEventHandlers({
 		}
 
 		if (state.view === "stash") {
+			clearMarksStatus()
 			if (event.key === ":") {
 				event.preventDefault()
 				openSettings("stash")
@@ -494,6 +566,11 @@ export function createEventHandlers({
 				return
 			}
 			if (event.key === "'") {
+				event.preventDefault()
+				startMarkMode("jump")
+				return
+			}
+			if (event.key === ";") {
 				event.preventDefault()
 				closeAndSend({ type: "openStash" })
 				return
@@ -580,6 +657,7 @@ export function createEventHandlers({
 		}
 
 		if (state.view === "settings") {
+			clearMarksStatus()
 			if (state.settings.editing) {
 				if (event.key === "Escape") {
 					event.preventDefault()
@@ -678,11 +756,13 @@ export function createEventHandlers({
 
 		if (event.key === "?") {
 			event.preventDefault()
+			clearMarksStatus()
 			toggleHelp()
 			return
 		}
 		if (event.key === ":") {
 			event.preventDefault()
+			clearMarksStatus()
 			openSettings("tabs")
 			return
 		}
@@ -703,29 +783,34 @@ export function createEventHandlers({
 		}
 		if (event.key === "G") {
 			event.preventDefault()
+			clearMarksStatus()
 			bottom()
 			renderTabs()
 			return
 		}
 		if (event.key === "Escape") {
 			event.preventDefault()
+			clearMarksStatus()
 			if (clearSearch()) return
 			commit()
 			return
 		}
 		if (nav[event.key]) {
 			event.preventDefault()
+			clearMarksStatus()
 			nav[event.key]()
 			renderTabs()
 			return
 		}
 		if (event.key === "d") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.markRemove()
 			return
 		}
 		if (event.key === "X") {
 			event.preventDefault()
+			clearMarksStatus()
 			closeAndSend({
 				type: "stashWindow",
 				windowId: state.wins[state.sel.w].id,
@@ -734,41 +819,59 @@ export function createEventHandlers({
 		}
 		if (event.key === "u") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.undoDel()
 			return
 		}
 		if (event.key === "y") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.yankCopy()
 			return
 		}
 		if (event.key === "p") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.paste(false)
 			return
 		}
 		if (event.key === "P") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.paste(true)
 			return
 		}
 		if (event.key === '"') {
 			event.preventDefault()
+			clearMarksStatus()
 			toggleStash()
 			return
 		}
 		if (event.key === "'") {
 			event.preventDefault()
+			startMarkMode("jump")
+			return
+		}
+		if (event.key === ";") {
+			event.preventDefault()
+			clearMarksStatus()
 			closeAndSend({ type: "openStash" })
 			return
 		}
 		if (event.key === "b") {
 			event.preventDefault()
+			clearMarksStatus()
 			actions.bookmark()
+			return
+		}
+		if (event.key === "m") {
+			event.preventDefault()
+			startMarkMode("set")
 			return
 		}
 		if (event.key === "Enter") {
 			event.preventDefault()
+			clearMarksStatus()
 			focusTab()
 		}
 	}

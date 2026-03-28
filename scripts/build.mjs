@@ -17,6 +17,7 @@ const copyStaticAssetsPlugin = {
 const sharedConfig = {
 	entryPoints: [
 		"src/background.js",
+		"src/marks.js",
 		"src/overlay.js",
 		"src/stash.js",
 		"src/settings.js",
@@ -36,6 +37,8 @@ async function copyStaticAssets() {
 	await cp("src/manager.html", "dist/manager.html")
 	await cp("src/preview.html", "dist/preview.html")
 	await cp("src/preview.js", "dist/preview.js")
+	await cp("src/marks.html", "dist/marks.html")
+	await cp("src/marks.css", "dist/marks.css")
 	await cp("src/stash.html", "dist/stash.html")
 	await cp("src/stash.css", "dist/stash.css")
 	await cp("src/settings.html", "dist/settings.html")
@@ -55,6 +58,8 @@ function watchStaticAssets() {
 		"src/manager.html",
 		"src/preview.html",
 		"src/preview.js",
+		"src/marks.html",
+		"src/marks.css",
 		"src/stash.html",
 		"src/stash.css",
 		"src/settings.html",

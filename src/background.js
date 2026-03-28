@@ -9,7 +9,13 @@ import {
 	showWindowPreviews,
 } from "./background/overlay.js"
 import { getPreviewSession } from "./background/session.js"
-import { openSettingsPage, openStashPage, stashWindow } from "./background/stash.js"
+import {
+	openMarksPage,
+	openSettingsPage,
+	openStashPage,
+	stashWindow,
+} from "./background/stash.js"
+import { getMarksData, openMark, setMark } from "./shared/marks.js"
 import { getStashData } from "./shared/stash.js"
 
 async function getFocusedTab() {
@@ -89,6 +95,12 @@ chrome.commands.onCommand.addListener(async (command) => {
 		const tab = await getFocusedTab()
 		if (!tab?.windowId) return
 		await stashWindow(tab.windowId, tab)
+		return
+	}
+
+	if (command === "open-marks") {
+		const tab = await getFocusedTab()
+		await openMarksPage(tab?.windowId)
 	}
 })
 
@@ -100,6 +112,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "getStashData") {
 		getStashData().then(sendResponse)
+		return true
+	}
+
+	if (msg.type === "getMarksData") {
+		getMarksData().then(sendResponse)
 		return true
 	}
 
@@ -115,6 +132,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		clearOverlayArtifacts().then(() => openSettingsPage(sender?.tab?.windowId))
 	}
 
+	if (msg.type === "openMarks") {
+		clearOverlayArtifacts().then(() => openMarksPage(sender?.tab?.windowId))
+	}
+
 	if (msg.type === "openStashedTab") {
 		chrome.tabs.create({
 			windowId: sender?.tab?.windowId,
@@ -125,5 +146,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 	if (msg.type === "stashWindow") {
 		clearOverlayArtifacts().then(() => stashWindow(msg.windowId, sender?.tab))
+	}
+
+	if (msg.type === "setMark") {
+		setMark(msg.key, msg.tab).then(sendResponse)
+		return true
+	}
+
+	if (msg.type === "openMark") {
+		clearOverlayArtifacts().then(() =>
+			openMark(msg.key, sender?.tab?.windowId).then(async (opened) => {
+				if (opened && msg.closeTabId) {
+					try {
+						await chrome.tabs.remove(msg.closeTabId)
+					} catch {}
+				}
+				sendResponse({ opened })
+			}),
+		)
+		return true
 	}
 })

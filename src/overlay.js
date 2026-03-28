@@ -47,8 +47,12 @@ if (!document.getElementById("vtm-backdrop")) {
 		new Promise((resolve) => {
 			chrome.runtime.sendMessage({ type: "getData" }, resolve)
 		}),
+		new Promise((resolve) => {
+			chrome.runtime.sendMessage({ type: "getMarksData" }, resolve)
+		}),
 		getSettings(),
-	]).then(([resp, settings]) => {
+	]).then(([resp, marksData, settings]) => {
+		state.marks.items = marksData.marks || {}
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize
