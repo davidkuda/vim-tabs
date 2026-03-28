@@ -328,7 +328,12 @@ export function createEventHandlers({
 	}
 
 	function toggleHelp() {
-		state.view = state.view === "tabs" ? "help" : "tabs"
+		if (state.view === "help") {
+			state.view = state.helpReturnView || "tabs"
+		} else {
+			state.helpReturnView = state.view
+			state.view = "help"
+		}
 		render()
 	}
 
@@ -356,6 +361,27 @@ export function createEventHandlers({
 		state.view = state.view === "marks" ? "tabs" : "marks"
 		clampMarksSelection()
 		render()
+	}
+
+	function openGlobalView(key) {
+		if (key === "?") {
+			toggleHelp()
+			return true
+		}
+		if (key === ":") {
+			if (state.view === "settings") leaveSettings()
+			else openSettings(state.view)
+			return true
+		}
+		if (key === '"') {
+			toggleStash()
+			return true
+		}
+		if (key === "M") {
+			toggleMarks()
+			return true
+		}
+		return false
 	}
 
 	function refreshMarks(callback) {
@@ -523,47 +549,18 @@ export function createEventHandlers({
 			return
 		}
 
-		if (state.view === "help") {
+		if (
+			!state.settings.editing &&
+			!state.search.active &&
+			["?", ":", '"', "M"].includes(event.key)
+		) {
+			event.preventDefault()
 			clearMarksStatus()
-			if (event.key === ":") {
-				event.preventDefault()
-				openSettings("help")
-				return
-			}
-			if (event.key === "j") {
-				event.preventDefault()
-				scrollHelp(120)
-				return
-			}
-			if (event.key === "k") {
-				event.preventDefault()
-				scrollHelp(-120)
-				return
-			}
-			if (event.key === "J") {
-				event.preventDefault()
-				scrollHelp(320)
-				return
-			}
-			if (event.key === "K") {
-				event.preventDefault()
-				scrollHelp(-320)
-				return
-			}
-			if (event.key === "?") {
-				event.preventDefault()
-				toggleHelp()
-			}
-			return
+			if (openGlobalView(event.key)) return
 		}
 
-		if (state.view === "stashHelp") {
+		if (state.view === "help") {
 			clearMarksStatus()
-			if (event.key === ":") {
-				event.preventDefault()
-				openSettings("stashHelp")
-				return
-			}
 			if (event.key === "j") {
 				event.preventDefault()
 				scrollHelp(120)
@@ -583,33 +580,12 @@ export function createEventHandlers({
 				event.preventDefault()
 				scrollHelp(-320)
 				return
-			}
-			if (event.key === "?") {
-				event.preventDefault()
-				state.view = "stash"
-				render()
 			}
 			return
 		}
 
 		if (state.view === "stash") {
 			clearMarksStatus()
-			if (event.key === ":") {
-				event.preventDefault()
-				openSettings("stash")
-				return
-			}
-			if (event.key === "?") {
-				event.preventDefault()
-				state.view = "stashHelp"
-				render()
-				return
-			}
-			if (event.key === '"') {
-				event.preventDefault()
-				toggleStash()
-				return
-			}
 			if (event.key === "'") {
 				event.preventDefault()
 				startMarkMode("jump")
@@ -710,11 +686,6 @@ export function createEventHandlers({
 					return
 				}
 				toggleMarks()
-				return
-			}
-			if (event.key === ":") {
-				event.preventDefault()
-				openSettings("marks")
 				return
 			}
 			if (event.key === "'") {
@@ -871,18 +842,6 @@ export function createEventHandlers({
 			return
 		}
 
-		if (event.key === "?") {
-			event.preventDefault()
-			clearMarksStatus()
-			toggleHelp()
-			return
-		}
-		if (event.key === ":") {
-			event.preventDefault()
-			clearMarksStatus()
-			openSettings("tabs")
-			return
-		}
 		if (event.key === "/") {
 			event.preventDefault()
 			startSearch()

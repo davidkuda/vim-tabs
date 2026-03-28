@@ -51,6 +51,25 @@ const themeOptions = [
 ]
 
 export function createRenderer(state, columns, footer) {
+	function renderFooterNav(activeView = "", extra = "") {
+		const extraHtml = extra ? `<div class="vtm-footer-copy">${extra}</div>` : ""
+		const item = (key, label, view) => `
+			<div class="vtm-footer-nav-item${activeView === view ? " vtm-active" : ""}">
+				<code>${key}</code><span>${label}</span>
+			</div>
+		`
+		return `
+			${extraHtml}
+			<div class="vtm-footer-nav" aria-label="Overlay navigation">
+				${item("?", "Help", "help")}
+				${item(":", "Settings", "settings")}
+				${item('"', "Stash", "stash")}
+				${item("M", "Marks", "marks")}
+				${item("ESC", "Exit", "exit")}
+			</div>
+		`
+	}
+
 	function getMarkColumns() {
 		const marks = Object.values(state.marks.items || {}).sort((a, b) =>
 			a.key.localeCompare(b.key),
@@ -278,7 +297,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for shortcuts. Press <code>/</code> to search tabs. Press <code>:</code> for settings. Press <code>Esc</code> to apply.</div>
+			${renderFooterNav("", "")}
 		`
 	}
 
@@ -302,8 +321,8 @@ export function createRenderer(state, columns, footer) {
 		const hero = document.createElement("div")
 		hero.className = "vtm-help-hero"
 		hero.innerHTML = `
-			<h2 class="vtm-help-title">Tabs Overview</h2>
-			<p class="vtm-help-copy">The overlay shows every open window as a column. You move through it with the keyboard, stage changes, and apply them when you leave the overlay.</p>
+			<h2 class="vtm-help-title">Help</h2>
+			<p class="vtm-help-copy">VimTabs has four overlay views: tabs, stash, marks, and settings. The same navigation strip is available throughout the overlay.</p>
 		`
 		help.appendChild(hero)
 
@@ -333,36 +352,45 @@ export function createRenderer(state, columns, footer) {
 			groups.appendChild(section)
 		}
 
-		addGroup("Navigate", [
+		addGroup("Tabs", [
 			["j / k", "move through tabs"],
 			["J / K", "jump 5 tabs"],
 			["h / l", "move between windows"],
 			["g / G", "jump to top or bottom"],
 			["Enter", "focus the selected tab"],
-		])
-
-		addGroup("Search", [
 			["/ query", "search titles and URLs"],
 			["n / N", "jump between matches"],
-		])
-
-		addGroup("Edit", [
 			["d", "queue the selected tab for deletion"],
 			["u", "undo the most recent queued delete"],
 			["y", "yank the selected tab into a temporary register"],
 			["p / P", "paste below or above"],
 			["b", "bookmark tab"],
-		])
-
-		addGroup("Marks And Stash", [
 			["m letter", "mark the selected tab"],
 			["' letter", "jump to a mark"],
-			['"', "browse the stash in overlay"],
+		])
+
+		addGroup("Stash", [
+			['"', "open stash inside the overlay"],
 			["X", "stash the current window"],
-			[";", "open the full stash page"],
+			[";", "open the standalone stash page"],
+			["j / k", "move through stashed tabs"],
+			["h / l", "move between stashed sessions"],
+			["Enter", "open the selected stashed tab"],
+			["Shift+Enter", "open in background"],
+		])
+
+		addGroup("Marks", [
+			["M", "open marks inside the overlay"],
+			["j / k", "move within the current marks column"],
+			["h / l", "move between temporary and persistent marks"],
+			["' letter", "jump directly to a mark"],
+			["d", "remove the selected mark"],
+		])
+
+		addGroup("Settings And Global", [
 			[":", "open settings"],
 			["?", "open or close help"],
-			["Esc", "apply changes and close"],
+			["ESC", "exit the current overlay view"],
 		])
 
 		help.appendChild(groups)
@@ -380,75 +408,7 @@ export function createRenderer(state, columns, footer) {
 
 		columns.appendChild(help)
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the tabs overview.</div>
-		`
-	}
-
-	function renderStashHelp() {
-		columns.innerHTML = ""
-
-		const help = document.createElement("section")
-		help.className = "vtm-help"
-
-		const hero = document.createElement("div")
-		hero.className = "vtm-help-hero"
-		hero.innerHTML = `
-			<h2 class="vtm-help-title">Stash</h2>
-			<p class="vtm-help-copy">Each column is one previously stashed window. Stashing stores the tabs from a window as a session so the window can be cleared without losing those tabs.</p>
-		`
-		help.appendChild(hero)
-
-		const groups = document.createElement("div")
-		groups.className = "vtm-help-groups"
-
-		const addGroup = (title, items) => {
-			const section = document.createElement("section")
-			section.className = "vtm-help-group"
-
-			const heading = document.createElement("h3")
-			heading.className = "vtm-help-group-title"
-			heading.textContent = title
-			section.appendChild(heading)
-
-			const list = document.createElement("div")
-			list.className = "vtm-help-list"
-
-			items.forEach(([key, action]) => {
-				const row = document.createElement("div")
-				row.className = "vtm-help-row"
-				row.innerHTML = `<code>${key}</code><span>${action}</span>`
-				list.appendChild(row)
-			})
-
-			section.appendChild(list)
-			groups.appendChild(section)
-		}
-
-		addGroup("Navigation", [
-			["j / k", "move down or up"],
-			["J / K", "jump 5 tabs down or up"],
-			["h / l", "jump between sessions"],
-			["g / G", "go to top or bottom"],
-		])
-
-		addGroup("Search", [
-			["/ query", "search stashed tabs"],
-			["n / N", "next / previous match"],
-			["Esc", "clear search or leave stash"],
-		])
-
-		addGroup("Open", [
-			["Enter", "open selected tab"],
-			["Shift+Enter", "open in background"],
-			['"', "return to stash"],
-			[";", "open full stash page"],
-			[":", "open settings"],
-		])
-
-		help.appendChild(groups)
-		columns.appendChild(help)
-		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the stash.</div>
+			${renderFooterNav("help", "Press <code>j</code> and <code>k</code> to scroll this page. Press <code>?</code> to return to the previous view.")}
 		`
 	}
 
@@ -472,7 +432,7 @@ export function createRenderer(state, columns, footer) {
 			stash.appendChild(empty)
 			columns.appendChild(stash)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Press <code>"</code> to return to the tabs overview. Press <code>:</code> for settings.</div>
+				${renderFooterNav("stash", "No stashed tabs yet.")}
 			`
 			return
 		}
@@ -547,7 +507,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>?</code> for stash help. Press <code>"</code> to return to tabs. Press <code>;</code> to open the full stash page. Press <code>:</code> for settings.</div>
+			${renderFooterNav("stash", "Press <code>;</code> to open the full stash page.")}
 		`
 	}
 
@@ -687,20 +647,20 @@ export function createRenderer(state, columns, footer) {
 
 		if (state.settings.status) {
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">${escapeHtml(state.settings.status)}</div>
+				${renderFooterNav("settings", escapeHtml(state.settings.status))}
 			`
 			return
 		}
 
 		if (state.settings.editing) {
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Editing hostname. Press <code>Enter</code> to save or <code>Esc</code> to cancel.</div>
+				${renderFooterNav("settings", "Editing hostname. Press <code>Enter</code> to save or <code>Esc</code> to cancel.")}
 			`
 			return
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>h</code> and <code>l</code> to move between columns, <code>j</code> and <code>k</code> to move within a column, <code>Enter</code> to apply an option, and <code>:</code> to return to the tabs overview.</div>
+			${renderFooterNav("settings", "Press <code>h</code> and <code>l</code> to move between columns. Press <code>j</code> and <code>k</code> to move within a column. Press <code>Enter</code> to apply an option.")}
 		`
 	}
 
@@ -786,20 +746,20 @@ export function createRenderer(state, columns, footer) {
 
 		if (state.marks.pending === "jump") {
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Jump to a mark with <code>a-z</code> or <code>A-Z</code>. Press <code>Esc</code> to cancel.</div>
+				${renderFooterNav("marks", "Jump to a mark with <code>a-z</code> or <code>A-Z</code>. Press <code>Esc</code> to cancel.")}
 			`
 			return
 		}
 
 		if (state.marks.status) {
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">${state.marks.status}</div>
+				${renderFooterNav("marks", state.marks.status)}
 			`
 			return
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>h</code> and <code>l</code> to move between columns, <code>j</code> and <code>k</code> to move within a column, <code>d</code> to remove the selected mark, <code>'</code> plus a letter to jump, and <code>Esc</code> to return to the tabs overview.</div>
+			${renderFooterNav("marks", "Press <code>h</code> and <code>l</code> to move between columns. Press <code>j</code> and <code>k</code> to move within a column. Press <code>d</code> to remove the selected mark. Press <code>'</code> plus a letter to jump.")}
 		`
 	}
 
@@ -829,10 +789,6 @@ export function createRenderer(state, columns, footer) {
 		}
 		if (state.view === "help") {
 			renderHelp()
-			return
-		}
-		if (state.view === "stashHelp") {
-			renderStashHelp()
 			return
 		}
 		if (state.view === "settings") {

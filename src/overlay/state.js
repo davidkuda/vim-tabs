@@ -26,6 +26,7 @@ export function createState() {
 		},
 		yank: null,
 		queue: [],
+		helpReturnView: "tabs",
 		view: "tabs",
 		search: {
 			active: false,
