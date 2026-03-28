@@ -58,6 +58,11 @@
 	backdrop-filter: blur(22px) saturate(0.95);
 }
 
+#vtm-backdrop.vtm-compact-prompt {
+	backdrop-filter: none;
+	background: transparent;
+}
+
 #vtm-modal.vtm-minimal-mode {
 	width: min(92vw, 760px);
 	max-width: 760px;
@@ -65,6 +70,20 @@
 	max-height: 78vh;
 	padding: 22px;
 	border-radius: 28px;
+}
+
+#vtm-modal.vtm-compact-prompt {
+	width: min(92vw, 560px);
+	max-width: 560px;
+	height: auto;
+	max-height: none;
+	padding: 18px;
+	top: 40px;
+	left: 50%;
+	transform: translateX(-50%);
+	box-shadow:
+		0 20px 48px rgba(7, 6, 7, 0.28),
+		0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 #vtm-shell {

@@ -21,8 +21,52 @@ async function getFocusedTab() {
 	return tab
 }
 
+async function closeInjectedOverlay(tabId) {
+	if (!tabId) return false
+
+	try {
+		const response = await chrome.tabs.sendMessage(tabId, { type: "closeOverlay" })
+		if (response?.closed) return true
+	} catch {}
+
+	try {
+		const [result] = await chrome.scripting.executeScript({
+			target: { tabId },
+			func: () => {
+				if (typeof window.__vtmCloseOverlay === "function") {
+					window.__vtmCloseOverlay()
+					return true
+				}
+				const backdrop = document.getElementById("vtm-backdrop")
+				if (backdrop) {
+					backdrop.remove()
+					return true
+				}
+				return false
+			},
+		})
+		return !!result?.result
+	} catch {
+		return false
+	}
+}
+
 async function launchOverlay(tab, options = {}) {
 	if (!tab?.id || !tab.windowId) return
+
+	const managerUrl = chrome.runtime.getURL("manager.html")
+	if (tab.url?.startsWith(managerUrl)) {
+		await clearOverlayArtifacts()
+		try {
+			await chrome.tabs.remove(tab.id)
+		} catch {}
+		return
+	}
+
+	if (await closeInjectedOverlay(tab.id)) {
+		await clearOverlayArtifacts()
+		return
+	}
 
 	await clearOverlayArtifacts()
 	await chrome.storage.local.set({
@@ -30,6 +74,7 @@ async function launchOverlay(tab, options = {}) {
 			initialView: options.initialView || "tabs",
 			initialMarksMode: options.initialMarksMode || "browse",
 			markTarget: options.markTarget || null,
+			minimalPrompt: !!options.minimalPrompt,
 		},
 	})
 
@@ -43,7 +88,9 @@ async function launchOverlay(tab, options = {}) {
 		overlayHostTabId = fallback.id
 	}
 
-	await showWindowPreviews(wins, tab.windowId)
+	if (!options.minimalPrompt) {
+		await showWindowPreviews(wins, tab.windowId)
+	}
 
 	try {
 		await chrome.windows.update(tab.windowId, { focused: true })
@@ -113,6 +160,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 		if (!tab) return
 		await launchOverlay(tab, {
 			initialView: "mark-create",
+			minimalPrompt: true,
 			markTarget: {
 				id: tab.id,
 				windowId: tab.windowId,

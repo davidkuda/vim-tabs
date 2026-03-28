@@ -2,6 +2,7 @@ import { createActions } from "./overlay/actions.js"
 import {
 	applyOverlayFrame,
 	applyOverlayTheme,
+	clearOverlayFrame,
 	createOverlayDom,
 } from "./overlay/dom.js"
 import { createEventHandlers } from "./overlay/events.js"
@@ -19,6 +20,10 @@ if (!document.getElementById("vtm-backdrop")) {
 	const applyUiSettings = () => {
 		const uiTheme = getUiTheme(state.settings.theme)
 		applyOverlayTheme(backdrop, modal, state.settings, uiTheme)
+		if (state.view === "mark-create" && state.marks.minimalPrompt) {
+			clearOverlayFrame(backdrop)
+			return
+		}
 		const currentWindow = state.wins[state.sel.w]
 		if (currentWindow) {
 			const windowColor = getWindowColor(
@@ -42,6 +47,42 @@ if (!document.getElementById("vtm-backdrop")) {
 		actions,
 		applyUiSettings,
 	})
+	let messageListener = null
+	let closed = false
+
+	const cleanupOverlay = () => {
+		if (closed) return
+		closed = true
+		events.detachListeners()
+		if (messageListener) chrome.runtime.onMessage.removeListener(messageListener)
+		delete window.__vtmCloseOverlay
+	}
+
+	window.__vtmCloseOverlay = () => {
+		if (closed) return
+		cleanupOverlay()
+		chrome.runtime.sendMessage({
+			type: "commit",
+			actions: state.queue,
+		})
+		backdrop.remove()
+	}
+
+	messageListener = (message, _sender, sendResponse) => {
+		if (message.type !== "closeOverlay") return
+		window.__vtmCloseOverlay()
+		sendResponse({ closed: true })
+		return true
+	}
+	chrome.runtime.onMessage.addListener(messageListener)
+
+	const observer = new MutationObserver(() => {
+		if (!document.getElementById("vtm-backdrop")) {
+			observer.disconnect()
+			cleanupOverlay()
+		}
+	})
+	observer.observe(document.documentElement, { childList: true, subtree: true })
 
 	Promise.all([
 		new Promise((resolve) => {
@@ -59,6 +100,7 @@ if (!document.getElementById("vtm-backdrop")) {
 		state.marks.mode = overlayContext?.initialMarksMode || "browse"
 		state.marks.targetTab = overlayContext?.markTarget || null
 		state.marks.draftKey = ""
+		state.marks.minimalPrompt = !!overlayContext?.minimalPrompt
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize

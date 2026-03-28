@@ -84,9 +84,12 @@ export function createRenderer(state, columns, footer) {
 		const minimal =
 			state.view === "mark-create" ||
 			(state.view === "marks" && state.marks.mode === "quick")
+		const compactPrompt = state.view === "mark-create" && state.marks.minimalPrompt
 
 		backdrop?.classList.toggle("vtm-minimal-mode", minimal)
 		modal?.classList.toggle("vtm-minimal-mode", minimal)
+		backdrop?.classList.toggle("vtm-compact-prompt", compactPrompt)
+		modal?.classList.toggle("vtm-compact-prompt", compactPrompt)
 		topbar?.classList.toggle("vtm-hidden", minimal)
 	}
 

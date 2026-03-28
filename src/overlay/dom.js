@@ -74,6 +74,15 @@ export function applyOverlayFrame(backdrop, color, label, labelFontSize = "3rem"
 	].join(";")
 }
 
+export function clearOverlayFrame(backdrop) {
+	backdrop.style.boxSizing = ""
+	backdrop.style.border = "none"
+	backdrop.style.background = "transparent"
+	backdrop.style.backdropFilter = "none"
+	backdrop.style.boxShadow = "none"
+	backdrop.querySelector("#vtm-window-badge")?.remove()
+}
+
 export function applyOverlayTheme(backdrop, modal, settings, uiTheme) {
 	const density = settings.density || "comfortable"
 

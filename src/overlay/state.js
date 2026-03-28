@@ -14,6 +14,7 @@ export function createState() {
 			status: "",
 			targetTab: null,
 			draftKey: "",
+			minimalPrompt: false,
 		},
 		settings: {
 			excludedDomains: [],

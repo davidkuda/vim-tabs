@@ -5,6 +5,7 @@ export const SETTING_LABEL_SIZES = ["small", "medium", "large"]
 export const SETTING_THEMES = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
 export const SETTING_QUICK_MARK_SORTS = ["recent", "frequent"]
 export const SETTING_MARK_ALPHA_ORDERS = ["small-first", "capital-first"]
+export const SETTING_HELP_TEXT_MODES = ["normal", "minimal"]
 
 export const DEFAULT_SETTINGS = {
 	excludedDomains: [],
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS = {
 	theme: "rose-pine-moon",
 	quickMarkSort: "frequent",
 	markAlphaOrder: "small-first",
+	helpTextMode: "normal",
 }
 
 export async function getSettings() {
@@ -42,6 +44,9 @@ export async function saveSettings(settings) {
 			markAlphaOrder: SETTING_MARK_ALPHA_ORDERS.includes(settings.markAlphaOrder)
 				? settings.markAlphaOrder
 				: DEFAULT_SETTINGS.markAlphaOrder,
+			helpTextMode: SETTING_HELP_TEXT_MODES.includes(settings.helpTextMode)
+				? settings.helpTextMode
+				: DEFAULT_SETTINGS.helpTextMode,
 		},
 	})
 }

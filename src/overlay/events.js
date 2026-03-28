@@ -1151,5 +1151,7 @@ export function createEventHandlers({
 
 	return {
 		attachListeners,
+		closeOverlay: () => commit(),
+		detachListeners,
 	}
 }
