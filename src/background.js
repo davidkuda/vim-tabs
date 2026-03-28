@@ -28,6 +28,7 @@ async function launchOverlay(tab, options = {}) {
 	await chrome.storage.local.set({
 		overlayContext: {
 			initialView: options.initialView || "tabs",
+			initialMarksMode: options.initialMarksMode || "browse",
 		},
 	})
 
@@ -99,7 +100,10 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 
 	if (command === "open-marks") {
-		await launchOverlay(await getFocusedTab(), { initialView: "marks" })
+		await launchOverlay(await getFocusedTab(), {
+			initialView: "marks",
+			initialMarksMode: "quick",
+		})
 		return
 	}
 })
@@ -118,7 +122,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (msg.type === "getOverlayContext") {
 		chrome.storage.local.get("overlayContext").then((data) => {
 			chrome.storage.local.remove("overlayContext")
-			sendResponse(data.overlayContext || { initialView: "tabs" })
+			sendResponse(
+				data.overlayContext || {
+					initialView: "tabs",
+					initialMarksMode: "browse",
+				},
+			)
 		})
 		return true
 	}

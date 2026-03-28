@@ -59,6 +59,8 @@ export async function setMark(key, tab) {
 		url: tab.url || "",
 		favIconUrl: tab.favIconUrl || "",
 		persistent: markKey === markKey.toUpperCase(),
+		usageCount: data.marks[markKey]?.usageCount || 0,
+		lastUsedAt: data.marks[markKey]?.lastUsedAt || 0,
 		updatedAt: Date.now(),
 	}
 	await saveMarksData(data)
@@ -93,6 +95,20 @@ async function findExistingTabByUrl(url) {
 	return tab || null
 }
 
+function touchMark(mark, tab) {
+	return {
+		...mark,
+		tabId: tab?.id ?? mark.tabId,
+		windowId: tab?.windowId ?? mark.windowId,
+		title: tab?.title || mark.title,
+		url: tab?.url || mark.url,
+		favIconUrl: tab?.favIconUrl || mark.favIconUrl || "",
+		live: !!tab || mark.live,
+		usageCount: (mark.usageCount || 0) + 1,
+		lastUsedAt: Date.now(),
+	}
+}
+
 export async function openMark(key, preferredWindowId) {
 	if (!isValidMark(key)) return false
 
@@ -103,21 +119,17 @@ export async function openMark(key, preferredWindowId) {
 	if (mark.tabId) {
 		try {
 			const tab = await chrome.tabs.get(mark.tabId)
-			if (await focusTab(tab)) return true
+			if (await focusTab(tab)) {
+				data.marks[key] = touchMark(mark, tab)
+				await saveMarksData(data)
+				return true
+			}
 		} catch {}
 	}
 
 	const existing = await findExistingTabByUrl(mark.url)
 	if (existing && (await focusTab(existing))) {
-		data.marks[key] = {
-			...mark,
-			tabId: existing.id,
-			windowId: existing.windowId,
-			title: existing.title || mark.title,
-			url: existing.url || mark.url,
-			favIconUrl: existing.favIconUrl || mark.favIconUrl || "",
-			live: true,
-		}
+		data.marks[key] = touchMark(mark, existing)
 		await saveMarksData(data)
 		return true
 	}
@@ -130,15 +142,7 @@ export async function openMark(key, preferredWindowId) {
 		active: true,
 	})
 
-	data.marks[key] = {
-		...mark,
-		tabId: tab.id,
-		windowId: tab.windowId,
-		title: tab.title || mark.title,
-		url: tab.url || mark.url,
-		favIconUrl: tab.favIconUrl || mark.favIconUrl || "",
-		live: true,
-	}
+	data.marks[key] = touchMark(mark, tab)
 	await saveMarksData(data)
 	return true
 }

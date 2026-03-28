@@ -70,13 +70,23 @@ export function createRenderer(state, columns, footer) {
 		`
 	}
 
+	function compareMarks(a, b) {
+		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
+		if (usageDiff !== 0) return usageDiff
+		const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
+		if (recentDiff !== 0) return recentDiff
+		return a.key.localeCompare(b.key)
+	}
+
 	function getMarkColumns() {
-		const marks = Object.values(state.marks.items || {}).sort((a, b) =>
-			a.key.localeCompare(b.key),
-		)
+		const marks = Object.values(state.marks.items || {})
+		const sortMarks =
+			state.marks.mode === "quick"
+				? [...marks].sort(compareMarks)
+				: [...marks].sort((a, b) => a.key.localeCompare(b.key))
 		return [
-			marks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
-			marks.filter((mark) => mark.key === mark.key.toUpperCase()),
+			sortMarks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
+			sortMarks.filter((mark) => mark.key === mark.key.toUpperCase()),
 		]
 	}
 
@@ -117,6 +127,26 @@ export function createRenderer(state, columns, footer) {
 			dateStyle: "medium",
 			timeStyle: "short",
 		}).format(createdAt)
+	}
+
+	function formatRelativeTime(timestamp) {
+		if (!timestamp) return "Not used yet"
+		const seconds = Math.max(1, Math.round((Date.now() - timestamp) / 1000))
+		const units = [
+			["year", 31536000],
+			["month", 2592000],
+			["week", 604800],
+			["day", 86400],
+			["hour", 3600],
+			["minute", 60],
+		]
+		for (const [unit, size] of units) {
+			if (seconds >= size) {
+				const value = Math.floor(seconds / size)
+				return `${value} ${unit}${value === 1 ? "" : "s"} ago`
+			}
+		}
+		return "Just now"
 	}
 
 	function matchesTab(tab, query) {
@@ -451,6 +481,7 @@ export function createRenderer(state, columns, footer) {
 			`
 			addGroup(groups, "Using Marks", [
 				["M", "open marks inside the overlay"],
+				["browser marks shortcut", "open quick marks ranked by use and recency"],
 				["j / k", "move within the current marks column"],
 				["h / l", "move between temporary and persistent marks"],
 				["' letter", "jump directly to a mark"],
@@ -459,6 +490,7 @@ export function createRenderer(state, columns, footer) {
 			explainer.innerHTML = `
 				<p><strong>Temporary marks:</strong> lowercase marks point to currently open tabs.</p>
 				<p><strong>Persistent marks:</strong> uppercase marks stay available and can reopen a tab by URL if the original tab no longer exists.</p>
+				<p><strong>Quick marks:</strong> opening marks from the browser shortcut shows the same marks view, but sorted by how often and how recently each mark was used. In that mode, typing the mark letter opens it immediately.</p>
 			`
 		}
 
@@ -742,12 +774,13 @@ export function createRenderer(state, columns, footer) {
 
 	function renderMarks() {
 		columns.innerHTML = ""
+		const quickMode = state.marks.mode === "quick"
 
 		const marksView = document.createElement("section")
 		marksView.className = "vtm-settings-view"
 		marksView.innerHTML = `
 			<div class="vtm-help-hero">
-				<h2 class="vtm-help-title vtm-settings-title">Marks</h2>
+				<h2 class="vtm-help-title vtm-settings-title">${quickMode ? "Quick Marks" : "Marks"}</h2>
 			</div>
 		`
 
@@ -805,7 +838,12 @@ export function createRenderer(state, columns, footer) {
 
 					const url = document.createElement("span")
 					url.className = "vtm-url"
-					url.textContent = formatUrl(mark.url)
+					const usageCount = mark.usageCount || 0
+					const usageLabel =
+						usageCount > 0
+							? `${usageCount} use${usageCount === 1 ? "" : "s"}`
+							: "Unused"
+					url.textContent = `${formatUrl(mark.url)} · ${usageLabel} · ${formatRelativeTime(mark.lastUsedAt)}`
 
 					meta.append(head, url)
 					card.appendChild(meta)
@@ -835,7 +873,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			${renderFooterNav("marks", "Press <code>h</code> and <code>l</code> to move between columns. Press <code>j</code> and <code>k</code> to move within a column. Press <code>d</code> to remove the selected mark. Press <code>'</code> plus a letter to jump.")}
+			${renderFooterNav("marks", quickMode ? "Directly type a mark letter to jump. Press <code>h</code> and <code>l</code> to move between columns. Press <code>j</code> and <code>k</code> to move within a column. Press <code>d</code> to remove the selected mark." : "Press <code>h</code> and <code>l</code> to move between columns. Press <code>j</code> and <code>k</code> to move within a column. Press <code>d</code> to remove the selected mark. Press <code>'</code> plus a letter to jump.")}
 		`
 	}
 

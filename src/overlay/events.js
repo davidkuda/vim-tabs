@@ -11,6 +11,14 @@ export function createEventHandlers({
 	actions,
 	applyUiSettings,
 }) {
+	function compareMarks(a, b) {
+		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
+		if (usageDiff !== 0) return usageDiff
+		const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
+		if (recentDiff !== 0) return recentDiff
+		return a.key.localeCompare(b.key)
+	}
+
 	function clearMarksState() {
 		state.marks.pending = null
 		state.marks.status = ""
@@ -191,12 +199,14 @@ export function createEventHandlers({
 	}
 
 	function getMarkColumns() {
-		const marks = Object.values(state.marks.items || {}).sort((a, b) =>
-			a.key.localeCompare(b.key),
-		)
+		const marks = Object.values(state.marks.items || {})
+		const sortMarks =
+			state.marks.mode === "quick"
+				? [...marks].sort(compareMarks)
+				: [...marks].sort((a, b) => a.key.localeCompare(b.key))
 		return [
-			marks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
-			marks.filter((mark) => mark.key === mark.key.toUpperCase()),
+			sortMarks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
+			sortMarks.filter((mark) => mark.key === mark.key.toUpperCase()),
 		]
 	}
 
@@ -385,7 +395,15 @@ export function createEventHandlers({
 	}
 
 	function toggleMarks() {
-		state.view = state.view === "marks" ? "tabs" : "marks"
+		if (state.view === "marks") {
+			state.view = "tabs"
+			state.marks.mode = "browse"
+			clampMarksSelection()
+			render()
+			return
+		}
+		state.view = "marks"
+		state.marks.mode = "browse"
 		clampMarksSelection()
 		render()
 	}
@@ -719,6 +737,7 @@ export function createEventHandlers({
 		}
 
 		if (state.view === "marks") {
+			const quickMode = state.marks.mode === "quick"
 			if (event.key === "Escape") {
 				event.preventDefault()
 				if (state.marks.pending) {
@@ -732,6 +751,11 @@ export function createEventHandlers({
 			if (event.key === "'") {
 				event.preventDefault()
 				startMarkMode("jump")
+				return
+			}
+			if (quickMode && isMarkKey(event.key) && state.marks.items[event.key]) {
+				event.preventDefault()
+				jumpToMark(event.key)
 				return
 			}
 			if (event.key === "d") {

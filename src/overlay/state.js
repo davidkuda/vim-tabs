@@ -8,6 +8,7 @@ export function createState() {
 		},
 		marks: {
 			items: {},
+			mode: "browse",
 			sel: { col: 0, rows: [0, 0] },
 			pending: null,
 			status: "",

@@ -56,6 +56,7 @@ if (!document.getElementById("vtm-backdrop")) {
 		getSettings(),
 	]).then(([resp, overlayContext, marksData, settings]) => {
 		state.marks.items = marksData.marks || {}
+		state.marks.mode = overlayContext?.initialMarksMode || "browse"
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize
