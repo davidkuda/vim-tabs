@@ -1,7 +1,7 @@
 import { curTab } from "./state.js"
 import { getSettings, normalizeDomain, saveSettings } from "../shared/settings.js"
 
-const settingsColumnCounts = [() => 0, () => 4, () => 5, () => 3]
+const settingsColumnCounts = [() => 0, () => 4, () => 7, () => 3]
 
 export function createEventHandlers({
 	backdrop,
@@ -257,6 +257,7 @@ export function createEventHandlers({
 			excludedDomains: state.settings.excludedDomains,
 			quickMarkSort: state.settings.quickMarkSort,
 			markAlphaOrder: state.settings.markAlphaOrder,
+			helpTextMode: state.settings.helpTextMode,
 			density: state.settings.density,
 			labelSize: state.settings.labelSize,
 			theme: state.settings.theme,
@@ -502,6 +503,7 @@ export function createEventHandlers({
 		state.settings.excludedDomains = settings.excludedDomains || []
 		state.settings.quickMarkSort = settings.quickMarkSort
 		state.settings.markAlphaOrder = settings.markAlphaOrder
+		state.settings.helpTextMode = settings.helpTextMode
 		state.settings.density = settings.density
 		state.settings.labelSize = settings.labelSize
 		state.settings.theme = settings.theme
@@ -606,10 +608,14 @@ export function createEventHandlers({
 				state.settings.density =
 					state.settings.sel.rows[2] === 0 ? "comfortable" : "compact"
 				state.settings.status = `Density set to ${state.settings.density}.`
-			} else {
+			} else if (state.settings.sel.rows[2] < 5) {
 				const sizeMap = ["small", "medium", "large"]
 				state.settings.labelSize = sizeMap[state.settings.sel.rows[2] - 2]
 				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
+			} else {
+				const helpTextMap = ["normal", "minimal"]
+				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[2] - 5]
+				state.settings.status = `Inline help text set to ${state.settings.helpTextMode}.`
 			}
 		}
 

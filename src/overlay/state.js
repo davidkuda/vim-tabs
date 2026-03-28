@@ -29,6 +29,7 @@ export function createState() {
 			theme: "rose-pine-moon",
 			quickMarkSort: "frequent",
 			markAlphaOrder: "small-first",
+			helpTextMode: "normal",
 		},
 		yank: null,
 		queue: [],

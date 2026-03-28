@@ -30,6 +30,18 @@ const layoutOptions = {
 			subtitle: "Bold badge size",
 		},
 	],
+	helpTextMode: [
+		{
+			value: "normal",
+			title: "Help text normal",
+			subtitle: "Show the full inline guidance",
+		},
+		{
+			value: "minimal",
+			title: "Help text minimal",
+			subtitle: "Show shorter inline hints",
+		},
+	],
 }
 
 const themeOptions = [
@@ -110,6 +122,10 @@ export function createRenderer(state, columns, footer) {
 				${item("ESC", "Exit", "exit")}
 			</div>
 		`
+	}
+
+	function helpText(normalText, minimalText) {
+		return state.settings.helpTextMode === "minimal" ? minimalText : normalText
 	}
 
 	function compareMarks(a, b) {
@@ -808,6 +824,10 @@ export function createRenderer(state, columns, footer) {
 				...option,
 				active: state.settings.labelSize === option.value,
 			})),
+			...layoutOptions.helpTextMode.map((option) => ({
+				...option,
+				active: state.settings.helpTextMode === option.value,
+			})),
 		]
 
 		layoutCards.forEach((item, index) => {
@@ -946,7 +966,10 @@ export function createRenderer(state, columns, footer) {
 			}
 
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Use <code>Ctrl+N</code> and <code>Ctrl+P</code> or <code>j</code> and <code>k</code> to move. Press <code>Enter</code> to open the selected mark. Press <code>Esc</code> to exit.</div>
+				<div class="vtm-footer-copy">${helpText(
+					"Use <code>Ctrl+N</code> and <code>Ctrl+P</code> or <code>j</code> and <code>k</code> to move. Press <code>Enter</code> to open the selected mark. Press <code>Esc</code> to exit.",
+					"<code>Ctrl+N</code> <code>Ctrl+P</code> or <code>j</code> <code>k</code> to move. <code>Enter</code> opens. <code>Esc</code> exits.",
+				)}</div>
 			`
 			return
 		}
@@ -1063,7 +1086,10 @@ export function createRenderer(state, columns, footer) {
 		hero.className = "vtm-quick-marks-hero"
 		hero.innerHTML = `
 			<h2 class="vtm-help-title vtm-settings-title">Add Mark</h2>
-			<p class="vtm-help-copy">Type a letter, then press <code>Enter</code> for a temporary mark or <code>Shift+Enter</code> for a persistent mark.</p>
+			<p class="vtm-help-copy">${helpText(
+				"Type a letter, then press <code>Enter</code> for a temporary mark or <code>Shift+Enter</code> for a persistent mark.",
+				"Type a letter. <code>Enter</code> saves temporary. <code>Shift+Enter</code> saves persistent.",
+			)}</p>
 		`
 		wrap.appendChild(hero)
 
@@ -1108,7 +1134,10 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			<div class="vtm-footer-copy">Press <code>Backspace</code> to clear the letter. Press <code>Esc</code> to cancel.</div>
+			<div class="vtm-footer-copy">${helpText(
+				"Press <code>Backspace</code> to clear the letter. Press <code>Esc</code> to cancel.",
+				"<code>Backspace</code> clears. <code>Esc</code> cancels.",
+			)}</div>
 		`
 	}
 

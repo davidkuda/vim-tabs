@@ -107,6 +107,7 @@ if (!document.getElementById("vtm-backdrop")) {
 		state.settings.theme = settings.theme
 		state.settings.quickMarkSort = settings.quickMarkSort
 		state.settings.markAlphaOrder = settings.markAlphaOrder
+		state.settings.helpTextMode = settings.helpTextMode
 
 		state.wins = resp.wins
 		state.sel = resp.activeSel
