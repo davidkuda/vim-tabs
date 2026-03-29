@@ -621,6 +621,7 @@ export function createEventHandlers({
 
 		if (
 			state.view !== "mark-create" &&
+			state.view !== "marks" &&
 			!state.settings.editing &&
 			!state.search.active &&
 			!(state.view === "marks" && state.marks.mode === "quick") &&

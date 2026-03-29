@@ -1,6 +1,26 @@
 import type { GetDataResponse } from "../shared/types.js"
 import { createEmptyPreviewState, getOverlaySession } from "./session-manager.js"
 
+function normalizedCoord(value: number | undefined) {
+	return Number.isFinite(value) ? (value as number) : Number.MAX_SAFE_INTEGER
+}
+
+export function sortWindowsByLayout<T extends chrome.windows.Window>(wins: T[]) {
+	return [...wins].sort((a, b) => {
+		const leftDiff = normalizedCoord(a.left) - normalizedCoord(b.left)
+		if (Math.abs(leftDiff) > 80) return leftDiff
+
+		const topDiff = normalizedCoord(a.top) - normalizedCoord(b.top)
+		if (Math.abs(topDiff) > 80) return topDiff
+
+		if ((a.focused ? 1 : 0) !== (b.focused ? 1 : 0)) {
+			return a.focused ? 1 : -1
+		}
+
+		return (a.id || 0) - (b.id || 0)
+	})
+}
+
 export async function getData(sessionId?: string): Promise<GetDataResponse> {
 	const session = (await getOverlaySession(sessionId)) || {
 		preview: createEmptyPreviewState(),
@@ -21,7 +41,7 @@ export async function getData(sessionId?: string): Promise<GetDataResponse> {
 		)
 	}
 
-	const wins = await chrome.windows.getAll({ populate: true })
+	const wins = sortWindowsByLayout(await chrome.windows.getAll({ populate: true }))
 	let activeSel = { w: 0, t: 0 }
 
 	wins.forEach((win, wi) => {

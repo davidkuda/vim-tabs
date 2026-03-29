@@ -15,6 +15,7 @@ import {
 	normalizeDomain,
 	normalizeDomains,
 } from "../src/shared/settings.js"
+import { sortWindowsByLayout } from "../src/background/data.js"
 import { createSessionFromWindow } from "../src/shared/stash.js"
 
 test("normalizeDomain strips protocol, www, paths, and ports", () => {
@@ -45,6 +46,18 @@ test("createSessionFromWindow preserves tab ordering", () => {
 	assert.equal(session.tabs[0].windowIndex, 0)
 	assert.equal(session.tabs[0].tabIndex, 0)
 	assert.equal(session.tabs[1].tabIndex, 1)
+})
+
+test("sortWindowsByLayout follows on-screen left-to-right ordering", () => {
+	const wins = sortWindowsByLayout([
+		{ id: 2, left: 1200, top: 20, focused: true, tabs: [] },
+		{ id: 1, left: 100, top: 20, focused: false, tabs: [] },
+		{ id: 3, left: 650, top: 20, focused: false, tabs: [] },
+	] as chrome.windows.Window[])
+	assert.deepEqual(
+		wins.map((win) => win.id),
+		[1, 3, 2],
+	)
 })
 
 test("reducer search lifecycle toggles active state and query", () => {

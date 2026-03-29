@@ -13,7 +13,7 @@ export const handleMarksKeys: ViewController = (event, ctx) => {
 		ctx.toggleMarks()
 		return true
 	}
-	if (event.key === "'") {
+	if (event.key === "'" || event.key === '"') {
 		if (quickMode) return false
 		event.preventDefault()
 		ctx.startMarkMode("jump")
