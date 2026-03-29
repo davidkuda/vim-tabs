@@ -7,6 +7,8 @@ export function createEventHandlers({
 	backdrop,
 	render,
 	renderTabs,
+	store,
+	sessionId,
 	state,
 	actions,
 	applyUiSettings,
@@ -83,20 +85,11 @@ export function createEventHandlers({
 
 	function startSearch() {
 		clearMarksState()
-		state.search.active = true
-		state.search.query = ""
-		state.search.originSel = { ...state.sel }
-		renderTabs()
+		store.startSearch(render)
 	}
 
 	function cancelSearch() {
-		if (state.search.originSel) {
-			state.sel = { ...state.search.originSel }
-		}
-		state.search.active = false
-		state.search.query = ""
-		state.search.originSel = null
-		renderTabs()
+		store.cancelSearch(render)
 	}
 
 	function clearSearch() {
@@ -106,7 +99,7 @@ export function createEventHandlers({
 		}
 		if (state.search.lastQuery) {
 			state.search.lastQuery = ""
-			renderTabs()
+			render()
 			return true
 		}
 		return false
@@ -116,8 +109,8 @@ export function createEventHandlers({
 		state.search.query = query
 		const matches = collectMatches(query)
 		if (matches.length) selectMatch(matches, 0)
-		else if (state.search.originSel) state.sel = { ...state.search.originSel }
-		renderTabs()
+		else if (state.search.originSel) store.restoreSelectionSnapshot(state.search.originSel)
+		render()
 	}
 
 	function confirmSearch() {
@@ -128,10 +121,7 @@ export function createEventHandlers({
 				selectMatch(matches, 0)
 			}
 		}
-		state.search.active = false
-		state.search.query = ""
-		state.search.originSel = null
-		renderTabs()
+		store.finishSearch(render)
 	}
 
 	function jumpSearch(direction) {
@@ -149,7 +139,7 @@ export function createEventHandlers({
 
 		const nextIndex = currentIndex === -1 ? 0 : currentIndex + direction
 		selectMatch(matches, nextIndex)
-		renderTabs()
+		render()
 	}
 
 	const nav = {
@@ -306,13 +296,17 @@ export function createEventHandlers({
 			type: "commit",
 			actions: state.queue,
 			postFocus,
+			sessionId,
 		})
 	}
 
 	function closeAndSend(message) {
 		detachListeners()
 		backdrop.remove()
-		chrome.runtime.sendMessage(message)
+		chrome.runtime.sendMessage({
+			...message,
+			sessionId,
+		})
 	}
 
 	function currentLiveTab() {
@@ -397,6 +391,7 @@ export function createEventHandlers({
 			type: "openStashedTab",
 			url: tab.url,
 			background: true,
+			sessionId,
 		})
 	}
 

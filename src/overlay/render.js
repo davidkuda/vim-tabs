@@ -1,3 +1,4 @@
+import { formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
 import { getWindowColor } from "../shared/window-colors.js"
 
 const layoutOptions = {
@@ -164,36 +165,12 @@ export function createRenderer(state, columns, footer) {
 		]
 	}
 
-	function getStashCounts(sessions) {
-		const counts = new Map()
-		sessions.forEach((session) => {
-			session.tabs.forEach((tab) => {
-				if (!tab.url) return
-				counts.set(tab.url, (counts.get(tab.url) || 0) + 1)
-			})
-		})
-		return counts
-	}
-
 	function escapeHtml(text) {
 		return `${text || ""}`
 			.replaceAll("&", "&amp;")
 			.replaceAll("<", "&lt;")
 			.replaceAll(">", "&gt;")
 			.replaceAll('"', "&quot;")
-	}
-
-	function formatUrl(url) {
-		if (!url) return ""
-		try {
-			const parsed = new URL(url)
-			const host = parsed.host.replace(/^www\./, "")
-			const path = `${parsed.pathname}${parsed.search}` || "/"
-			const compactPath = path.length > 36 ? `${path.slice(0, 33)}...` : path
-			return `${host}${compactPath === "/" ? "" : compactPath}`
-		} catch {
-			return url.length > 52 ? `${url.slice(0, 49)}...` : url
-		}
 	}
 
 	function formatSessionDate(createdAt) {
@@ -223,12 +200,6 @@ export function createRenderer(state, columns, footer) {
 		return "Just now"
 	}
 
-	function matchesTab(tab, query) {
-		if (!query) return false
-		const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
-		return haystack.includes(query.toLowerCase())
-	}
-
 	function getTabMarks(tab) {
 		if (!tab?.id) return []
 		return Object.values(state.marks.items || {})
@@ -237,55 +208,22 @@ export function createRenderer(state, columns, footer) {
 	}
 
 	function buildCard(tab, wi, ti) {
-		const card = document.createElement("div")
-		card.className = "vtm-card"
+		const card = document.createElement("vtm-link-card")
 		card.dataset.w = wi
 		card.dataset.t = ti
 
-		if (tab._removed) card.classList.add("vtm-removed")
-		if (
-			matchesTab(tab, state.search.active ? state.search.query : state.search.lastQuery)
-		) {
-			card.classList.add("vtm-match")
-		}
-
-		if (tab.favIconUrl && !tab.favIconUrl.startsWith("chrome://")) {
-			const img = document.createElement("img")
-			img.className = "vtm-favicon"
-			img.src = tab.favIconUrl
-			card.appendChild(img)
-		}
-
-		const meta = document.createElement("div")
-		meta.className = "vtm-meta"
-
-		const head = document.createElement("div")
-		head.className = "vtm-title-row"
-
-		const title = document.createElement("span")
-		title.className = "vtm-title"
-		title.textContent = tab.title || tab.url
-		head.appendChild(title)
-
 		const marks = getTabMarks(tab)
-		if (marks.length) {
-			const badges = document.createElement("div")
-			badges.className = "vtm-mark-badges"
-			marks.forEach((mark) => {
-				const badge = document.createElement("span")
-				badge.className = "vtm-mark-badge"
-				badge.textContent = mark.key
-				badges.appendChild(badge)
-			})
-			head.appendChild(badges)
+		card.data = {
+			title: tab.title || tab.url,
+			url: tab.url,
+			favIconUrl: tab.favIconUrl,
+			badges: marks.map((mark) => mark.key),
 		}
-
-		const url = document.createElement("span")
-		url.className = "vtm-url"
-		url.textContent = formatUrl(tab.url)
-
-		meta.append(head, url)
-		card.appendChild(meta)
+		card.removed = !!tab._removed
+		card.matched = matchesTextQuery(
+			tab,
+			state.search.active ? state.search.query : state.search.lastQuery,
+		)
 
 		return card
 	}
@@ -355,21 +293,17 @@ export function createRenderer(state, columns, footer) {
 
 		state.wins.forEach((win, wi) => {
 			const windowColor = getWindowColor(win, wi, state.settings.theme)
-			const col = document.createElement("div")
-			col.className = "vtm-col"
+			const col = document.createElement("vtm-column-panel")
 			col.dataset.w = wi
-			col.style.borderColor = windowColor.accent
-			col.style.background = windowColor.surface
+			col.setAttribute("data-title", windowColor.label)
+			col.setAttribute("data-accent", windowColor.accent)
+			col.setAttribute("data-border", windowColor.accent)
+			col.setAttribute("data-surface", windowColor.surface)
 			columns.appendChild(col)
-
-			const header = document.createElement("div")
-			header.className = "vtm-col-header"
-			header.style.background = windowColor.accent
-			header.textContent = windowColor.label
-			col.appendChild(header)
+			const body = col.body || col
 
 			win.tabs.forEach((tab, ti) => {
-				col.appendChild(buildCard(tab, wi, ti))
+				body.appendChild(buildCard(tab, wi, ti))
 			})
 		})
 
@@ -421,7 +355,7 @@ export function createRenderer(state, columns, footer) {
 		let count = 0
 		state.wins.forEach((win) => {
 			win.tabs.forEach((tab) => {
-				if (matchesTab(tab, query)) count++
+				if (matchesTextQuery(tab, query)) count++
 			})
 		})
 		return count
@@ -620,50 +554,21 @@ export function createRenderer(state, columns, footer) {
 			column.appendChild(head)
 
 			session.tabs.forEach((tab, ti) => {
-				const item = document.createElement("div")
+				const item = document.createElement("vtm-link-card")
 				item.className = "vtm-stash-tab"
 				item.dataset.s = si
 				item.dataset.t = ti
-				if (
-					matchesTab(
-						tab,
-						state.search.active ? state.search.query : state.search.lastQuery,
-					)
-				) {
-					item.classList.add("vtm-match")
-				}
-
-				if (tab.favIconUrl && !tab.favIconUrl.startsWith("chrome://")) {
-					const img = document.createElement("img")
-					img.className = "vtm-stash-favicon"
-					img.src = tab.favIconUrl
-					item.appendChild(img)
-				}
-
-				const meta = document.createElement("div")
-				meta.className = "vtm-stash-meta-block"
-				const titleRow = document.createElement("div")
-				titleRow.className = "vtm-stash-title-row"
-
-				const title = document.createElement("div")
-				title.className = "vtm-stash-tab-title"
-				title.textContent = tab.title
-				titleRow.appendChild(title)
-
 				const duplicateCount = stashCounts.get(tab.url) || 0
-				if (duplicateCount > 1) {
-					const badge = document.createElement("span")
-					badge.className = "vtm-stash-count"
-					badge.textContent = `${duplicateCount}x`
-					titleRow.appendChild(badge)
+				item.data = {
+					title: tab.title,
+					url: tab.url,
+					favIconUrl: tab.favIconUrl,
+					countBadge: duplicateCount > 1 ? `${duplicateCount}x` : "",
 				}
-
-				const url = document.createElement("div")
-				url.className = "vtm-stash-tab-url"
-				url.textContent = formatUrl(tab.url)
-
-				meta.append(titleRow, url)
-				item.appendChild(meta)
+				item.matched = matchesTextQuery(
+					tab,
+					state.search.active ? state.search.query : state.search.lastQuery,
+				)
 				column.appendChild(item)
 			})
 
@@ -1102,27 +1007,13 @@ export function createRenderer(state, columns, footer) {
 		wrap.appendChild(prompt)
 
 		if (targetTab) {
-			const card = document.createElement("div")
+			const card = document.createElement("vtm-link-card")
 			card.className = "vtm-card vtm-settings-card vtm-quick-mark-card"
-
-			const meta = document.createElement("div")
-			meta.className = "vtm-meta"
-
-			const titleRow = document.createElement("div")
-			titleRow.className = "vtm-title-row"
-
-			const title = document.createElement("span")
-			title.className = "vtm-title"
-			title.textContent = targetTab.title || targetTab.url || "Current tab"
-
-			titleRow.appendChild(title)
-
-			const url = document.createElement("span")
-			url.className = "vtm-url"
-			url.textContent = formatUrl(targetTab.url)
-
-			meta.append(titleRow, url)
-			card.appendChild(meta)
+			card.data = {
+				title: targetTab.title || targetTab.url || "Current tab",
+				url: targetTab.url,
+				favIconUrl: targetTab.favIconUrl,
+			}
 			wrap.appendChild(card)
 		}
 
@@ -1147,14 +1038,14 @@ export function createRenderer(state, columns, footer) {
 		if (state.view === "stash") {
 			state.stash.sessions.forEach((session) => {
 				session.tabs.forEach((tab) => {
-					if (matchesTab(tab, query)) count++
+					if (matchesTextQuery(tab, query)) count++
 				})
 			})
 			return count
 		}
 		state.wins.forEach((win) => {
 			win.tabs.forEach((tab) => {
-				if (matchesTab(tab, query)) count++
+				if (matchesTextQuery(tab, query)) count++
 			})
 		})
 		return count

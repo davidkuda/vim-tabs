@@ -9,10 +9,13 @@ const state = {
 	density: "comfortable",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
+	quickMarkSort: "frequent",
+	markAlphaOrder: "small-first",
+	helpTextMode: "normal",
 	status: "",
 }
 
-function setStatus(message) {
+function setStatus(message: string) {
 	state.status = message
 	render()
 }
@@ -23,10 +26,13 @@ async function persist() {
 		density: state.density,
 		labelSize: state.labelSize,
 		theme: state.theme,
+		quickMarkSort: state.quickMarkSort,
+		markAlphaOrder: state.markAlphaOrder,
+		helpTextMode: state.helpTextMode,
 	})
 }
 
-async function addDomain(rawValue) {
+async function addDomain(rawValue: string) {
 	const domain = normalizeDomain(rawValue)
 	if (!domain) {
 		setStatus("Enter a hostname like gmail.com or chat.openai.com.")
@@ -43,7 +49,7 @@ async function addDomain(rawValue) {
 	setStatus(`Excluded ${domain} from future stashes.`)
 }
 
-async function removeDomain(domain) {
+async function removeDomain(domain: string) {
 	state.excludedDomains = state.excludedDomains.filter((entry) => entry !== domain)
 	await persist()
 	setStatus(`Removed ${domain} from the exclusion list.`)
@@ -68,22 +74,22 @@ function render() {
 	`
 
 	const form = document.getElementById("vtm-settings-form")
-	const input = document.getElementById("vtm-domain-input")
+	const input = document.getElementById("vtm-domain-input") as HTMLInputElement | null
 	const list = document.getElementById("vtm-settings-list")
 
-	form.addEventListener("submit", async (event) => {
+	form?.addEventListener("submit", async (event) => {
 		event.preventDefault()
-		const value = input.value
-		input.value = ""
+		const value = input?.value || ""
+		if (input) input.value = ""
 		await addDomain(value)
-		input.focus()
+		input?.focus()
 	})
 
 	if (!state.excludedDomains.length) {
 		const empty = document.createElement("div")
 		empty.className = "vtm-settings-empty"
 		empty.textContent = "No excluded domains yet."
-		list.appendChild(empty)
+		list?.appendChild(empty)
 	} else {
 		state.excludedDomains.forEach((domain) => {
 			const item = document.createElement("div")
@@ -94,8 +100,8 @@ function render() {
 			`
 			item
 				.querySelector(".vtm-settings-remove")
-				.addEventListener("click", () => removeDomain(domain))
-			list.appendChild(item)
+				?.addEventListener("click", () => removeDomain(domain))
+			list?.appendChild(item)
 		})
 	}
 }
@@ -105,6 +111,9 @@ getSettings().then((settings) => {
 	state.density = settings.density
 	state.labelSize = settings.labelSize
 	state.theme = settings.theme
+	state.quickMarkSort = settings.quickMarkSort
+	state.markAlphaOrder = settings.markAlphaOrder
+	state.helpTextMode = settings.helpTextMode
 	render()
 	document.getElementById("vtm-domain-input")?.focus()
 })

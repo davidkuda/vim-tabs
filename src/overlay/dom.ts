@@ -1,3 +1,5 @@
+import type { SettingsData } from "../shared/types.js"
+
 export function createOverlayDom() {
 	const backdrop = document.createElement("div")
 	backdrop.id = "vtm-backdrop"
@@ -6,8 +8,8 @@ export function createOverlayDom() {
 	modal.id = "vtm-modal"
 	modal.tabIndex = 0
 
-	const chrome = document.createElement("div")
-	chrome.id = "vtm-shell"
+	const chromeShell = document.createElement("div")
+	chromeShell.id = "vtm-shell"
 
 	const topbar = document.createElement("div")
 	topbar.id = "vtm-topbar"
@@ -25,8 +27,8 @@ export function createOverlayDom() {
 	trap.style.cssText = "position:absolute;opacity:0"
 	trap.ariaHidden = "true"
 
-	chrome.append(topbar, columns, footer)
-	modal.append(chrome, trap)
+	chromeShell.append(topbar, columns, footer)
+	modal.append(chromeShell, trap)
 	backdrop.appendChild(modal)
 	document.documentElement.appendChild(backdrop)
 	trap.focus({ preventScroll: true })
@@ -39,7 +41,12 @@ export function createOverlayDom() {
 	}
 }
 
-export function applyOverlayFrame(backdrop, color, label, labelFontSize = "3rem") {
+export function applyOverlayFrame(
+	backdrop: HTMLDivElement,
+	color: string,
+	label: string,
+	labelFontSize = "3rem",
+) {
 	backdrop.style.boxSizing = "border-box"
 	backdrop.style.border = `3px solid ${color}`
 	backdrop.style.background = [
@@ -51,7 +58,7 @@ export function applyOverlayFrame(backdrop, color, label, labelFontSize = "3rem"
 	backdrop.style.backdropFilter = "blur(22px) saturate(1.05)"
 	backdrop.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,0.14)"
 
-	let badge = backdrop.querySelector("#vtm-window-badge")
+	let badge = backdrop.querySelector<HTMLDivElement>("#vtm-window-badge")
 	if (!badge) {
 		badge = document.createElement("div")
 		badge.id = "vtm-window-badge"
@@ -74,7 +81,7 @@ export function applyOverlayFrame(backdrop, color, label, labelFontSize = "3rem"
 	].join(";")
 }
 
-export function clearOverlayFrame(backdrop) {
+export function clearOverlayFrame(backdrop: HTMLDivElement) {
 	backdrop.style.boxSizing = ""
 	backdrop.style.border = "none"
 	backdrop.style.background = "transparent"
@@ -83,7 +90,17 @@ export function clearOverlayFrame(backdrop) {
 	backdrop.querySelector("#vtm-window-badge")?.remove()
 }
 
-export function applyOverlayTheme(backdrop, modal, settings, uiTheme) {
+export function applyOverlayTheme(
+	backdrop: HTMLDivElement,
+	modal: HTMLDivElement,
+	settings: Pick<SettingsData, "density">,
+	uiTheme: {
+		colorScheme: "dark" | "light"
+		text: { primary: string; muted: string; subtle: string }
+		backdrop: { base: string; washTop: string; washBottom: string }
+		modal: { base: string; glow: string; ring: string }
+	},
+) {
 	const density = settings.density || "comfortable"
 
 	backdrop.style.colorScheme = uiTheme.colorScheme

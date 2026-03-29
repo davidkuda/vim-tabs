@@ -1,18 +1,20 @@
+import type { MarkRecord, MarksData, TabDescriptor } from "./types.js"
+
 const MARKS_KEY = "marksData"
 
-function isValidMark(key) {
+function isValidMark(key: string | undefined | null) {
 	return /^[a-zA-Z]$/.test(key || "")
 }
 
-export async function getMarksData() {
+export async function getMarksData(): Promise<MarksData> {
 	const data = await chrome.storage.local.get(MARKS_KEY)
-	const marks = data[MARKS_KEY]?.marks || {}
-	const nextMarks = {}
+	const marks = (data[MARKS_KEY]?.marks || {}) as Record<string, MarkRecord>
+	const nextMarks: Record<string, MarkRecord> = {}
 
 	for (const [key, mark] of Object.entries(marks)) {
 		if (!isValidMark(key)) continue
 
-		let resolved = { ...mark, key }
+		let resolved: MarkRecord = { ...mark, key }
 
 		if (mark.tabId) {
 			try {
@@ -42,11 +44,11 @@ export async function getMarksData() {
 	return { marks: nextMarks }
 }
 
-export async function saveMarksData(data) {
+export async function saveMarksData(data: MarksData) {
 	await chrome.storage.local.set({ [MARKS_KEY]: data })
 }
 
-export async function setMark(key, tab) {
+export async function setMark(key: string, tab: TabDescriptor | null | undefined) {
 	if (!isValidMark(key) || !tab?.id) return null
 
 	const markKey = key
@@ -67,7 +69,7 @@ export async function setMark(key, tab) {
 	return data.marks[markKey]
 }
 
-export async function deleteMark(key) {
+export async function deleteMark(key: string) {
 	if (!isValidMark(key)) return false
 
 	const data = await getMarksData()
@@ -78,7 +80,7 @@ export async function deleteMark(key) {
 	return true
 }
 
-async function focusTab(tab) {
+async function focusTab(tab: chrome.tabs.Tab | null | undefined) {
 	if (!tab?.id) return false
 	try {
 		await chrome.windows.update(tab.windowId, { focused: true })
@@ -89,13 +91,13 @@ async function focusTab(tab) {
 	}
 }
 
-async function findExistingTabByUrl(url) {
+async function findExistingTabByUrl(url: string | undefined) {
 	if (!url) return null
 	const [tab] = await chrome.tabs.query({ url })
 	return tab || null
 }
 
-function touchMark(mark, tab) {
+function touchMark(mark: MarkRecord, tab: chrome.tabs.Tab | null | undefined): MarkRecord {
 	return {
 		...mark,
 		tabId: tab?.id ?? mark.tabId,
@@ -109,7 +111,7 @@ function touchMark(mark, tab) {
 	}
 }
 
-export async function openMark(key, preferredWindowId) {
+export async function openMark(key: string, preferredWindowId?: number) {
 	if (!isValidMark(key)) return false
 
 	const data = await getMarksData()

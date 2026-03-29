@@ -1,7 +1,12 @@
+import type { OverlayState, UndoEntry } from "./state.js"
 import { curTab, rmQueue } from "./state.js"
 
-export function createActions(state, undo, renderTabs) {
-	function setYank(tab, cut = false) {
+export function createActions(
+	state: OverlayState,
+	undo: UndoEntry[],
+	renderTabs: () => void,
+) {
+	function setYank(tab: ReturnType<typeof curTab>, cut = false) {
 		state.yank = {
 			cut,
 			tabId: tab.id,
@@ -26,6 +31,7 @@ export function createActions(state, undo, renderTabs) {
 			return
 		}
 
+		if (!tab.id) return
 		tab._removed = true
 		setYank(tab, true)
 		state.queue.push({ type: "remove", tabId: tab.id })
@@ -39,10 +45,10 @@ export function createActions(state, undo, renderTabs) {
 		const dst = state.wins[state.sel.w]
 		const index = above ? state.sel.t : state.sel.t + 1
 
-		if (state.yank.cut) {
+		if (state.yank.cut && state.yank.tabId) {
 			rmQueue(
 				state,
-				(action) => action.type === "remove" && action.tabId === state.yank.tabId,
+				(action) => action.type === "remove" && action.tabId === state.yank?.tabId,
 			)
 			state.queue.push({
 				type: "move",
@@ -52,7 +58,9 @@ export function createActions(state, undo, renderTabs) {
 			})
 
 			state.wins.forEach((win) => {
-				const existingIndex = win.tabs.findIndex((tab) => tab.id === state.yank.tabId)
+				const existingIndex = win.tabs.findIndex(
+					(tab) => tab.id === state.yank?.tabId,
+				)
 				if (existingIndex !== -1) win.tabs.splice(existingIndex, 1)
 			})
 
@@ -63,7 +71,7 @@ export function createActions(state, undo, renderTabs) {
 				favIconUrl: state.yank.favIconUrl,
 			})
 		} else {
-			const tempId = "tmp-" + Date.now() + "-" + Math.random()
+			const tempId = `tmp-${Date.now()}-${Math.random()}`
 			dst.tabs.splice(index, 0, {
 				_temp: true,
 				_tempId: tempId,
@@ -73,7 +81,7 @@ export function createActions(state, undo, renderTabs) {
 			})
 			state.queue.push({
 				type: "create",
-				url: state.yank.url,
+				url: state.yank.url || "",
 				windowId: dst.id,
 				index,
 				tempId,
@@ -94,14 +102,18 @@ export function createActions(state, undo, renderTabs) {
 
 		const { w, t, tab } = removed
 		tab._removed = false
-		rmQueue(state, (action) => action.type === "remove" && action.tabId === tab.id)
+		if (tab.id) {
+			rmQueue(state, (action) => action.type === "remove" && action.tabId === tab.id)
+		}
 		state.sel.w = w
 		state.sel.t = t
 		renderTabs()
 	}
 
 	function bookmark() {
-		state.queue.push({ type: "bookmark", tabId: curTab(state).id })
+		const tabId = curTab(state).id
+		if (!tabId) return
+		state.queue.push({ type: "bookmark", tabId })
 	}
 
 	return {

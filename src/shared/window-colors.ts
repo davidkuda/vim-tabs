@@ -1,4 +1,30 @@
-const THEMES = {
+import type { SettingsData, WindowDescriptor } from "./types.js"
+
+type ThemeName = SettingsData["theme"]
+
+interface UiTheme {
+	name: string
+	colorScheme: "dark" | "light"
+	backdrop: {
+		base: string
+		washTop: string
+		washBottom: string
+		frameVeil: string
+	}
+	modal: {
+		base: string
+		glow: string
+		ring: string
+	}
+	text: {
+		primary: string
+		muted: string
+		subtle: string
+	}
+	palette: Array<{ name: string; accent: string; surface: string }>
+}
+
+const THEMES: Record<ThemeName, UiTheme> = {
 	"rose-pine": {
 		name: "Rose Pine",
 		colorScheme: "dark",
@@ -85,11 +111,15 @@ const THEMES = {
 	},
 }
 
-export function getUiTheme(themeName) {
+export function getUiTheme(themeName: ThemeName = "rose-pine-moon") {
 	return THEMES[themeName] || THEMES["rose-pine-moon"]
 }
 
-export function getWindowColor(win, index, themeName = "rose-pine-moon") {
+export function getWindowColor(
+	win: WindowDescriptor,
+	index: number,
+	themeName: ThemeName = "rose-pine-moon",
+) {
 	const theme = getUiTheme(themeName)
 	const paletteEntry = theme.palette[index % theme.palette.length]
 	const tabCount = win.tabs.length
@@ -101,7 +131,7 @@ export function getWindowColor(win, index, themeName = "rose-pine-moon") {
 	}
 }
 
-export function getLabelFontSize(labelSize = "medium") {
+export function getLabelFontSize(labelSize: SettingsData["labelSize"] = "medium") {
 	if (labelSize === "small") return "2rem"
 	if (labelSize === "large") return "3.5rem"
 	return "3rem"

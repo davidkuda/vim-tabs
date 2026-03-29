@@ -13,7 +13,7 @@
 	"license": "ISC",
 	"author": "davidkuda",
 	"type": "commonjs",
-	"main": "src/background.js",
+	"main": "src/background.ts",
 	"scripts": {
 		"build": "node scripts/build.mjs",
 		"dev": "node scripts/build.mjs --watch",

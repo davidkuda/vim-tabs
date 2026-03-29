@@ -1,4 +1,6 @@
-export async function focusById(id) {
+import type { FocusDescriptor } from "../shared/types.js"
+
+export async function focusById(id: number) {
 	try {
 		const tab = await chrome.tabs.get(id)
 		await chrome.windows.update(tab.windowId, { focused: true })
@@ -8,7 +10,7 @@ export async function focusById(id) {
 	}
 }
 
-export async function focusByDescriptor(desc) {
+export async function focusByDescriptor(desc: FocusDescriptor) {
 	try {
 		const { windowId, index, url } = desc
 		const tabs = await chrome.tabs.query({ windowId, url })

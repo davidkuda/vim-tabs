@@ -1,3 +1,8 @@
+import { registerLinkCard } from "./components/link-card.js"
+import { getStashCounts, matchesTextQuery } from "./shared/ui.js"
+
+registerLinkCard()
+
 ;(() => {
 	const root = document.createElement("div")
 	root.id = "vtm-stash"
@@ -15,20 +20,7 @@
 		},
 	}
 
-	function formatUrl(url) {
-		if (!url) return ""
-		try {
-			const parsed = new URL(url)
-			const host = parsed.host.replace(/^www\./, "")
-			const path = `${parsed.pathname}${parsed.search}` || "/"
-			const compactPath = path.length > 36 ? `${path.slice(0, 33)}...` : path
-			return `${host}${compactPath === "/" ? "" : compactPath}`
-		} catch {
-			return url.length > 52 ? `${url.slice(0, 49)}...` : url
-		}
-	}
-
-	function formatSessionDate(createdAt) {
+	function formatSessionDate(createdAt: number) {
 		return new Intl.DateTimeFormat(undefined, {
 			dateStyle: "medium",
 			timeStyle: "short",
@@ -39,46 +31,29 @@
 		return state.sessions[state.sel.s]?.tabs[state.sel.t]
 	}
 
-	function getStashCounts() {
-		const counts = new Map()
-		state.sessions.forEach((session) => {
-			session.tabs.forEach((tab) => {
-				if (!tab.url) return
-				counts.set(tab.url, (counts.get(tab.url) || 0) + 1)
-			})
-		})
-		return counts
-	}
-
-	function matchesTab(tab, query) {
-		if (!query) return false
-		const haystack = `${tab.title || ""} ${tab.url || ""}`.toLowerCase()
-		return haystack.includes(query.toLowerCase())
-	}
-
-	function countMatches(query) {
+	function countMatches(query: string) {
 		if (!query) return 0
 		let count = 0
 		state.sessions.forEach((session) => {
 			session.tabs.forEach((tab) => {
-				if (matchesTab(tab, query)) count++
+				if (matchesTextQuery(tab, query)) count++
 			})
 		})
 		return count
 	}
 
-	function collectMatches(query) {
+	function collectMatches(query: string) {
 		if (!query) return []
 		const matches = []
 		state.sessions.forEach((session, si) => {
 			session.tabs.forEach((tab, ti) => {
-				if (matchesTab(tab, query)) matches.push({ s: si, t: ti })
+				if (matchesTextQuery(tab, query)) matches.push({ s: si, t: ti })
 			})
 		})
 		return matches
 	}
 
-	function selectMatch(matches, index) {
+	function selectMatch(matches, index: number) {
 		if (!matches.length) return
 		const next = matches[((index % matches.length) + matches.length) % matches.length]
 		state.sel.s = next.s
@@ -129,7 +104,7 @@
 
 		const columns = document.createElement("div")
 		columns.className = "vtm-stash-columns"
-		const stashCounts = getStashCounts()
+		const stashCounts = getStashCounts(state.sessions)
 
 		state.sessions.forEach((session, si) => {
 			const column = document.createElement("section")
@@ -144,50 +119,21 @@
 			column.appendChild(head)
 
 			session.tabs.forEach((tab, ti) => {
-				const item = document.createElement("div")
+				const item = document.createElement("vtm-link-card")
 				item.className = "vtm-stash-tab"
 				item.dataset.s = si
 				item.dataset.t = ti
-				if (
-					matchesTab(
-						tab,
-						state.search.active ? state.search.query : state.search.lastQuery,
-					)
-				) {
-					item.classList.add("vtm-match")
-				}
-
-				if (tab.favIconUrl && !tab.favIconUrl.startsWith("chrome://")) {
-					const img = document.createElement("img")
-					img.className = "vtm-stash-favicon"
-					img.src = tab.favIconUrl
-					item.appendChild(img)
-				}
-
-				const meta = document.createElement("div")
-				meta.className = "vtm-stash-meta-block"
-				const titleRow = document.createElement("div")
-				titleRow.className = "vtm-stash-title-row"
-
-				const title = document.createElement("div")
-				title.className = "vtm-stash-tab-title"
-				title.textContent = tab.title
-				titleRow.appendChild(title)
-
 				const duplicateCount = stashCounts.get(tab.url) || 0
-				if (duplicateCount > 1) {
-					const badge = document.createElement("span")
-					badge.className = "vtm-stash-count"
-					badge.textContent = `${duplicateCount}x`
-					titleRow.appendChild(badge)
+				item.data = {
+					title: tab.title,
+					url: tab.url,
+					favIconUrl: tab.favIconUrl,
+					countBadge: duplicateCount > 1 ? `${duplicateCount}x` : "",
 				}
-
-				const url = document.createElement("div")
-				url.className = "vtm-stash-tab-url"
-				url.textContent = formatUrl(tab.url)
-
-				meta.append(titleRow, url)
-				item.appendChild(meta)
+				item.matched = matchesTextQuery(
+					tab,
+					state.search.active ? state.search.query : state.search.lastQuery,
+				)
 				column.appendChild(item)
 			})
 
@@ -286,7 +232,7 @@
 		return false
 	}
 
-	function updateSearch(query) {
+	function updateSearch(query: string) {
 		state.search.query = query
 		const matches = collectMatches(query)
 		if (matches.length) selectMatch(matches, 0)
@@ -308,7 +254,7 @@
 		render()
 	}
 
-	function jumpSearch(direction) {
+	function jumpSearch(direction: number) {
 		if (!state.search.lastQuery) return
 		const matches = collectMatches(state.search.lastQuery)
 		if (!matches.length) return
@@ -324,7 +270,7 @@
 		state.sel.t = tabs.length - 1
 	}
 
-	function onKey(event) {
+	function onKey(event: KeyboardEvent) {
 		if (state.search.active) {
 			if (event.key === "Escape") {
 				event.preventDefault()
@@ -458,8 +404,8 @@
 		}
 	}
 
-	chrome.storage.local.get("stashData", (data) => {
-		state.sessions = data.stashData?.sessions || []
+	chrome.runtime.sendMessage({ type: "getStashData" }, (data) => {
+		state.sessions = data?.sessions || []
 		render()
 		window.addEventListener("keydown", onKey, true)
 	})

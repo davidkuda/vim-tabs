@@ -1,4 +1,6 @@
-export async function applyActions(list) {
+import type { QueuedAction } from "../shared/types.js"
+
+export async function applyActions(list: QueuedAction[]) {
 	for (const action of list) {
 		try {
 			switch (action.type) {

@@ -4,14 +4,26 @@ import {
 	getWindowColor,
 } from "../shared/window-colors.js"
 import { getSettings } from "../shared/settings.js"
-import { clearPreviewSession, getPreviewSession, setPreviewSession } from "./session.js"
+import {
+	createEmptyPreviewState,
+	getOverlaySession,
+	updateOverlayFallback,
+	updateOverlayPreview,
+} from "./session-manager.js"
 
 const WINDOW_BORDER_ID = "vtm-window-border"
 
-export async function injectOverlay(tabId) {
+export async function injectOverlay(tabId: number, sessionId: string) {
 	await chrome.scripting.insertCSS({
 		target: { tabId },
 		files: ["overlay.css"],
+	})
+	await chrome.scripting.executeScript({
+		target: { tabId },
+		func: (value) => {
+			;(window as Window & { __VTM_SESSION_ID?: string }).__VTM_SESSION_ID = value
+		},
+		args: [sessionId],
 	})
 	await chrome.scripting.executeScript({
 		target: { tabId },
@@ -19,23 +31,30 @@ export async function injectOverlay(tabId) {
 	})
 }
 
-export async function openFallbackPage(tab) {
+export async function openFallbackPage(tab: chrome.tabs.Tab, sessionId: string) {
+	const params = new URLSearchParams({ sessionId })
 	const fallback = await chrome.tabs.create({
 		windowId: tab.windowId,
-		url: chrome.runtime.getURL("manager.html"),
+		url: `${chrome.runtime.getURL("manager.html")}?${params.toString()}`,
 		active: true,
 	})
 
-	await chrome.storage.local.set({
-		fallbackId: fallback.id,
-		fallbackOriginalTabId: tab.id,
-		fallbackWindowId: tab.windowId,
+	await updateOverlayFallback(sessionId, {
+		tabId: fallback.id,
+		originalTabId: tab.id,
+		windowId: tab.windowId,
 	})
 
 	return fallback
 }
 
-function mountWindowBorder(borderId, color, label, labelFontSize, frameVeil) {
+function mountWindowBorder(
+	borderId: string,
+	color: string,
+	label: string,
+	labelFontSize: string,
+	frameVeil: string,
+) {
 	const existing = document.getElementById(borderId)
 	if (existing) existing.remove()
 
@@ -90,11 +109,11 @@ function mountWindowBorder(borderId, color, label, labelFontSize, frameVeil) {
 	document.documentElement.appendChild(border)
 }
 
-function unmountWindowBorder(borderId) {
+function unmountWindowBorder(borderId: string) {
 	document.getElementById(borderId)?.remove()
 }
 
-export async function clearWindowBorders(tabs) {
+export async function clearWindowBorders(tabs: Array<{ id?: number }>) {
 	for (const tab of tabs) {
 		if (!tab?.id) continue
 
@@ -108,11 +127,15 @@ export async function clearWindowBorders(tabs) {
 	}
 }
 
-async function openPreviewPage(win, index, settings) {
-	const activeTab = win.tabs.find((tab) => tab.active)
+async function openPreviewPage(
+	win: chrome.windows.Window,
+	index: number,
+	settings: Awaited<ReturnType<typeof getSettings>>,
+) {
+	const activeTab = (win.tabs || []).find((tab) => tab.active)
 	if (!activeTab?.id) return null
 
-	const windowColor = getWindowColor(win, index, settings.theme)
+	const windowColor = getWindowColor(win as never, index, settings.theme)
 	const params = new URLSearchParams({
 		color: windowColor.accent,
 		label: windowColor.label,
@@ -133,23 +156,27 @@ async function openPreviewPage(win, index, settings) {
 	}
 }
 
-export async function showWindowPreviews(wins, currentWindowId) {
-	await clearPreviewArtifacts()
+export async function showWindowPreviews(
+	sessionId: string,
+	wins: chrome.windows.Window[],
+	currentWindowId: number,
+) {
+	await clearPreviewArtifacts(sessionId)
 	const settings = await getSettings()
 	const uiTheme = getUiTheme(settings.theme)
 	const labelFontSize = getLabelFontSize(settings.labelSize)
 
 	const entries = []
-	const borderTabIds = []
+	const borderTabIds: number[] = []
 
 	for (const [index, win] of wins.entries()) {
 		if (win.id === currentWindowId) continue
 
-		const activeTab = win.tabs.find((tab) => tab.active)
+		const activeTab = (win.tabs || []).find((tab) => tab.active)
 		if (!activeTab?.id) continue
 
 		try {
-			const windowColor = getWindowColor(win, index, settings.theme)
+			const windowColor = getWindowColor(win as never, index, settings.theme)
 			await chrome.scripting.executeScript({
 				target: { tabId: activeTab.id },
 				func: mountWindowBorder,
@@ -168,15 +195,16 @@ export async function showWindowPreviews(wins, currentWindowId) {
 		}
 	}
 
-	await setPreviewSession({ entries, borderTabIds })
+	await updateOverlayPreview(sessionId, { entries, borderTabIds })
 }
 
-export async function clearPreviewArtifacts() {
-	const session = await getPreviewSession()
+export async function clearPreviewArtifacts(sessionId?: string) {
+	const session = await getOverlaySession(sessionId)
+	const preview = session?.preview || createEmptyPreviewState()
 
-	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
+	await clearWindowBorders(preview.borderTabIds.map((id) => ({ id })))
 
-	for (const entry of session.entries) {
+	for (const entry of preview.entries) {
 		try {
 			await chrome.tabs.remove(entry.helperTabId)
 		} catch {}
@@ -186,5 +214,7 @@ export async function clearPreviewArtifacts() {
 		} catch {}
 	}
 
-	await clearPreviewSession()
+	if (sessionId) {
+		await updateOverlayPreview(sessionId, createEmptyPreviewState())
+	}
 }

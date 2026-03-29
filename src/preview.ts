@@ -20,21 +20,24 @@ const previewThemes = {
 		bg: "#faf4ed",
 		text: "#575279",
 	},
-}
+} as const
 
 if (color) {
 	document.documentElement.style.setProperty("--accent", color)
 }
 
-if (theme && previewThemes[theme]) {
+if (theme && theme in previewThemes) {
 	document.documentElement.style.setProperty(
 		"color-scheme",
-		previewThemes[theme].colorScheme,
+		previewThemes[theme as keyof typeof previewThemes].colorScheme,
 	)
-	document.documentElement.style.setProperty("--preview-bg", previewThemes[theme].bg)
+	document.documentElement.style.setProperty(
+		"--preview-bg",
+		previewThemes[theme as keyof typeof previewThemes].bg,
+	)
 	document.documentElement.style.setProperty(
 		"--preview-text",
-		previewThemes[theme].text,
+		previewThemes[theme as keyof typeof previewThemes].text,
 	)
 }
 
@@ -44,5 +47,5 @@ if (labelSize === "small") {
 	document.documentElement.style.setProperty("--preview-label-size", "3.5rem")
 }
 
-document.getElementById("label").textContent = label || "Window Preview"
+document.getElementById("label")!.textContent = label || "Window Preview"
 document.title = label || "VimTabs Preview"

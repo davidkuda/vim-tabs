@@ -8,9 +8,14 @@ import {
 	openFallbackPage,
 	showWindowPreviews,
 } from "./background/overlay.js"
-import { getPreviewSession } from "./background/session.js"
+import {
+	clearOverlaySession,
+	createOverlaySession,
+	getOverlaySession,
+} from "./background/session-manager.js"
 import { openSettingsPage, openStashPage, stashWindow } from "./background/stash.js"
 import { deleteMark, getMarksData, openMark, setMark } from "./shared/marks.js"
+import { getSettings } from "./shared/settings.js"
 import { getStashData } from "./shared/stash.js"
 
 async function getFocusedTab() {
@@ -21,7 +26,7 @@ async function getFocusedTab() {
 	return tab
 }
 
-async function closeInjectedOverlay(tabId) {
+async function closeInjectedOverlay(tabId: number | undefined) {
 	if (!tabId) return false
 
 	try {
@@ -51,12 +56,27 @@ async function closeInjectedOverlay(tabId) {
 	}
 }
 
+async function clearOverlayArtifacts(sessionId: string | undefined) {
+	if (!sessionId) return
+	const session = await getOverlaySession(sessionId)
+	if (!session) return
+	await clearWindowBorders(session.preview.borderTabIds.map((id) => ({ id })))
+	await clearPreviewArtifacts(sessionId)
+}
+
+async function teardownOverlaySession(sessionId: string | undefined) {
+	if (!sessionId) return
+	await clearOverlayArtifacts(sessionId)
+	await clearOverlaySession(sessionId)
+}
+
 async function launchOverlay(tab, options = {}) {
 	if (!tab?.id || !tab.windowId) return
 
 	const managerUrl = chrome.runtime.getURL("manager.html")
 	if (tab.url?.startsWith(managerUrl)) {
-		await clearOverlayArtifacts()
+		const existingSessionId = new URL(tab.url).searchParams.get("sessionId") || undefined
+		await teardownOverlaySession(existingSessionId)
 		try {
 			await chrome.tabs.remove(tab.id)
 		} catch {}
@@ -64,32 +84,28 @@ async function launchOverlay(tab, options = {}) {
 	}
 
 	if (await closeInjectedOverlay(tab.id)) {
-		await clearOverlayArtifacts()
 		return
 	}
 
-	await clearOverlayArtifacts()
-	await chrome.storage.local.set({
-		overlayContext: {
-			initialView: options.initialView || "tabs",
-			initialMarksMode: options.initialMarksMode || "browse",
-			markTarget: options.markTarget || null,
-			minimalPrompt: !!options.minimalPrompt,
-		},
+	const session = await createOverlaySession({
+		initialView: options.initialView || "tabs",
+		initialMarksMode: options.initialMarksMode || "browse",
+		markTarget: options.markTarget || null,
+		minimalPrompt: !!options.minimalPrompt,
 	})
 
-	const { wins } = await getData()
+	const { wins } = await getData(session.id)
 	let overlayHostTabId = tab.id
 
 	try {
-		await injectOverlay(tab.id)
-	} catch (error) {
-		const fallback = await openFallbackPage(tab)
+		await injectOverlay(tab.id, session.id)
+	} catch {
+		const fallback = await openFallbackPage(tab, session.id)
 		overlayHostTabId = fallback.id
 	}
 
 	if (!options.minimalPrompt) {
-		await showWindowPreviews(wins, tab.windowId)
+		await showWindowPreviews(session.id, wins, tab.windowId)
 	}
 
 	try {
@@ -99,9 +115,12 @@ async function launchOverlay(tab, options = {}) {
 }
 
 async function handleCommit(msg, senderTab) {
-	const session = await getPreviewSession()
-	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
-	await clearPreviewArtifacts()
+	const sessionId = msg.sessionId
+	const session = await getOverlaySession(sessionId)
+	if (!session) return
+
+	await clearWindowBorders(session.preview.borderTabIds.map((id) => ({ id })))
+	await clearPreviewArtifacts(sessionId)
 	await applyActions(msg.actions || [])
 
 	if (msg.postFocus) {
@@ -110,23 +129,13 @@ async function handleCommit(msg, senderTab) {
 			: await focusByDescriptor(msg.postFocus)
 	}
 
-	try {
-		const { fallbackId } = await chrome.storage.local.get("fallbackId")
-		if (fallbackId && senderTab && senderTab.id === fallbackId) {
-			await chrome.tabs.remove(fallbackId)
-			await chrome.storage.local.remove([
-				"fallbackId",
-				"fallbackOriginalTabId",
-				"fallbackWindowId",
-			])
-		}
-	} catch {}
-}
+	if (session.fallback?.tabId && senderTab?.id === session.fallback.tabId) {
+		try {
+			await chrome.tabs.remove(session.fallback.tabId)
+		} catch {}
+	}
 
-async function clearOverlayArtifacts() {
-	const session = await getPreviewSession()
-	await clearWindowBorders(session.borderTabIds.map((id) => ({ id })))
-	await clearPreviewArtifacts()
+	await clearOverlaySession(sessionId)
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -140,7 +149,6 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 
 	if (command === "stash-window") {
-		await clearOverlayArtifacts()
 		const tab = await getFocusedTab()
 		if (!tab?.windowId) return
 		await stashWindow(tab.windowId, tab)
@@ -173,27 +181,31 @@ chrome.commands.onCommand.addListener(async (command) => {
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-	if (msg.type === "getData") {
-		getData().then(sendResponse)
+	if (msg.type === "getBootstrap") {
+		Promise.all([
+			getData(msg.sessionId),
+			getOverlaySession(msg.sessionId),
+			getMarksData(),
+			getSettings(),
+		]).then(([data, session, marksData, settings]) => {
+			sendResponse({
+				sessionId: msg.sessionId,
+				context: session?.context || {
+					initialView: "tabs",
+					initialMarksMode: "browse",
+					markTarget: null,
+					minimalPrompt: false,
+				},
+				data,
+				marks: marksData.marks || {},
+				settings,
+			})
+		})
 		return true
 	}
 
 	if (msg.type === "getStashData") {
 		getStashData().then(sendResponse)
-		return true
-	}
-
-	if (msg.type === "getOverlayContext") {
-		chrome.storage.local.get("overlayContext").then((data) => {
-			chrome.storage.local.remove("overlayContext")
-			sendResponse(
-				data.overlayContext || {
-					initialView: "tabs",
-					initialMarksMode: "browse",
-					markTarget: null,
-				},
-			)
-		})
 		return true
 	}
 
@@ -203,15 +215,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "commit") {
-		handleCommit(msg, sender && sender.tab)
+		handleCommit(msg, sender?.tab)
 	}
 
 	if (msg.type === "openStash") {
-		clearOverlayArtifacts().then(() => openStashPage(sender?.tab?.windowId))
+		teardownOverlaySession(msg.sessionId).then(() => openStashPage(sender?.tab?.windowId))
 	}
 
 	if (msg.type === "openSettings") {
-		clearOverlayArtifacts().then(() => openSettingsPage(sender?.tab?.windowId))
+		teardownOverlaySession(msg.sessionId).then(() =>
+			openSettingsPage(sender?.tab?.windowId),
+		)
 	}
 
 	if (msg.type === "openStashedTab") {
@@ -223,7 +237,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "stashWindow") {
-		clearOverlayArtifacts().then(() => stashWindow(msg.windowId, sender?.tab))
+		clearOverlayArtifacts(msg.sessionId).then(() =>
+			stashWindow(msg.windowId, sender?.tab, msg.sessionId).then(() =>
+				clearOverlaySession(msg.sessionId),
+			),
+		)
 	}
 
 	if (msg.type === "setMark") {
@@ -237,7 +255,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "openMark") {
-		clearOverlayArtifacts().then(() =>
+		teardownOverlaySession(msg.sessionId).then(() =>
 			openMark(msg.key, sender?.tab?.windowId).then(async (opened) => {
 				if (opened && msg.closeTabId) {
 					try {
