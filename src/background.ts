@@ -184,8 +184,11 @@ async function handleCommit(msg, senderTab) {
 	const session = await getOverlaySession(sessionId)
 	if (!session) return
 
+	const fallbackTabId = session.fallback?.tabId
+	const ownerTabId = session.ownerTabId
 	await clearOverlayArtifacts(sessionId)
 	await applyActions(msg.actions || [])
+	await clearOverlaySession(sessionId)
 
 	if (msg.postFocus) {
 		typeof msg.postFocus === "number"
@@ -193,16 +196,16 @@ async function handleCommit(msg, senderTab) {
 			: await focusByDescriptor(msg.postFocus)
 	}
 
-	if (session.fallback?.tabId && senderTab?.id === session.fallback.tabId) {
+	if (fallbackTabId && senderTab?.id === fallbackTabId) {
 		try {
-			await chrome.tabs.remove(session.fallback.tabId)
+			await chrome.tabs.remove(fallbackTabId)
 		} catch {}
-		try {
-			await focusById(session.ownerTabId)
-		} catch {}
+		if (!msg.postFocus) {
+			try {
+				await focusById(ownerTabId)
+			} catch {}
+		}
 	}
-
-	await clearOverlaySession(sessionId)
 }
 
 function isExtensionSender(sender) {

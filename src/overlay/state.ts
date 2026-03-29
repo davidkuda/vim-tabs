@@ -97,7 +97,7 @@ export function createState(): OverlayState {
 		},
 		settings: {
 			excludedDomains: [],
-			sel: { col: 0, rows: [0, 0, 0, 0] },
+			sel: { col: 0, rows: [0, 0, 0] },
 			draft: "",
 			editing: false,
 			insertIndex: 0,

@@ -1,6 +1,6 @@
 import type { ViewController } from "./types.js"
 
-const settingsColumnCounts = [() => 0, () => 4, () => 7, () => 3]
+const settingsColumnCounts = [() => 16, () => 0, () => 4]
 
 export const handleSettingsKeys: ViewController = (event, ctx) => {
 	ctx.clearMarksStatus()
@@ -40,10 +40,12 @@ export const handleSettingsKeys: ViewController = (event, ctx) => {
 	if (event.key === "j") {
 		event.preventDefault()
 		const col = ctx.state.settings.sel.col
-		const maxRow =
-			col === 0
+		const maxRow = Math.max(
+			0,
+			col === 1
 				? ctx.state.settings.excludedDomains.length - 1
-				: settingsColumnCounts[col]() - 1
+				: settingsColumnCounts[col]() - 1,
+		)
 		ctx.state.settings.sel.rows[col] = Math.min(
 			ctx.state.settings.sel.rows[col] + 1,
 			maxRow,
@@ -69,7 +71,7 @@ export const handleSettingsKeys: ViewController = (event, ctx) => {
 	}
 	if (event.key === "l") {
 		event.preventDefault()
-		ctx.state.settings.sel.col = Math.min(ctx.state.settings.sel.col + 1, 3)
+		ctx.state.settings.sel.col = Math.min(ctx.state.settings.sel.col + 1, 2)
 		ctx.state.settings.status = ""
 		ctx.render()
 		return true

@@ -11,7 +11,7 @@ import { getCommandPaletteItems } from "./commands.js"
 import type { OverlayControllerContext } from "./controllers/types.js"
 import { curTab } from "./state.js"
 
-const settingsColumnCounts = [() => 0, () => 4, () => 13, () => 3]
+const settingsColumnCounts = [() => 16, () => 0, () => 4]
 
 export function createEventHandlers({
 	backdrop,
@@ -109,25 +109,21 @@ export function createEventHandlers({
 	}
 
 	function clampSettingsSelection() {
-		state.settings.sel.col = Math.max(0, Math.min(state.settings.sel.col, 3))
+		state.settings.sel.col = Math.max(0, Math.min(state.settings.sel.col, 2))
 		state.settings.sel.rows[0] = Math.max(
 			0,
-			Math.min(
-				state.settings.sel.rows[0],
-				state.settings.excludedDomains.length + (state.settings.editing ? 1 : 0) - 1,
-			),
+			Math.min(state.settings.sel.rows[0], settingsColumnCounts[0]() - 1),
 		)
 		state.settings.sel.rows[1] = Math.max(
 			0,
-			Math.min(state.settings.sel.rows[1], settingsColumnCounts[1]() - 1),
+			Math.min(
+				state.settings.sel.rows[1],
+				state.settings.excludedDomains.length + (state.settings.editing ? 1 : 0) - 1,
+			),
 		)
 		state.settings.sel.rows[2] = Math.max(
 			0,
 			Math.min(state.settings.sel.rows[2], settingsColumnCounts[2]() - 1),
-		)
-		state.settings.sel.rows[3] = Math.max(
-			0,
-			Math.min(state.settings.sel.rows[3], settingsColumnCounts[3]() - 1),
 		)
 	}
 
@@ -371,10 +367,10 @@ export function createEventHandlers({
 	}
 
 	function startSettingsInsert(offset) {
-		if (state.settings.sel.col !== 0) return
+		if (state.settings.sel.col !== 1) return
 		state.settings.status = ""
 		const baseIndex = state.settings.excludedDomains.length
-			? state.settings.sel.rows[0] + offset
+			? state.settings.sel.rows[1] + offset
 			: 0
 		state.settings.editing = true
 		state.settings.draft = ""
@@ -382,7 +378,7 @@ export function createEventHandlers({
 			0,
 			Math.min(baseIndex, state.settings.excludedDomains.length),
 		)
-		state.settings.sel.rows[0] = state.settings.insertIndex
+		state.settings.sel.rows[1] = state.settings.insertIndex
 		render()
 	}
 
@@ -399,7 +395,7 @@ export function createEventHandlers({
 			return
 		}
 		state.settings.excludedDomains.splice(state.settings.insertIndex, 0, domain)
-		state.settings.sel.rows[0] = state.settings.excludedDomains.indexOf(domain)
+		state.settings.sel.rows[1] = state.settings.excludedDomains.indexOf(domain)
 		state.settings.editing = false
 		state.settings.draft = ""
 		state.settings.insertIndex = 0
@@ -420,12 +416,12 @@ export function createEventHandlers({
 	async function deleteSelectedSetting() {
 		if (
 			state.settings.editing ||
-			state.settings.sel.col !== 0 ||
+			state.settings.sel.col !== 1 ||
 			!state.settings.excludedDomains.length
 		) {
 			return
 		}
-		const [removed] = state.settings.excludedDomains.splice(state.settings.sel.rows[0], 1)
+		const [removed] = state.settings.excludedDomains.splice(state.settings.sel.rows[1], 1)
 		clampSettingsSelection()
 		state.settings.status = removed ? `Removed ${removed} from the exclusion list.` : ""
 		await persistSettings()
@@ -434,44 +430,43 @@ export function createEventHandlers({
 
 	async function applyCurrentSettingsOption() {
 		state.settings.status = ""
-		if (state.settings.sel.col === 1) {
-			if (state.settings.sel.rows[1] < 2) {
+		if (state.settings.sel.col === 2) {
+			if (state.settings.sel.rows[2] < 2) {
 				const sortMap = ["recent", "frequent"]
-				state.settings.quickMarkSort = sortMap[state.settings.sel.rows[1]]
+				state.settings.quickMarkSort = sortMap[state.settings.sel.rows[2]]
 				state.settings.status = `Quick marks set to ${state.settings.quickMarkSort} first.`
 			} else {
 				const alphaMap = ["small-first", "capital-first"]
-				state.settings.markAlphaOrder = alphaMap[state.settings.sel.rows[1] - 2]
+				state.settings.markAlphaOrder = alphaMap[state.settings.sel.rows[2] - 2]
 				state.settings.status = `Alphabetical mark order set to ${state.settings.markAlphaOrder}.`
 			}
 		}
-		if (state.settings.sel.col === 2) {
-			if (state.settings.sel.rows[2] < 2) {
+		if (state.settings.sel.col === 0) {
+			if (state.settings.sel.rows[0] < 2) {
 				state.settings.density =
-					state.settings.sel.rows[2] === 0 ? "comfortable" : "compact"
+					state.settings.sel.rows[0] === 0 ? "comfortable" : "compact"
 				state.settings.status = `Density set to ${state.settings.density}.`
-			} else if (state.settings.sel.rows[2] < 5) {
+			} else if (state.settings.sel.rows[0] < 5) {
 				const widthMap = ["320", "360", "420"]
-				state.settings.columnWidth = widthMap[state.settings.sel.rows[2] - 2]
+				state.settings.columnWidth = widthMap[state.settings.sel.rows[0] - 2]
 				state.settings.status = `Column width set to ${state.settings.columnWidth}px.`
-			} else if (state.settings.sel.rows[2] < 8) {
+			} else if (state.settings.sel.rows[0] < 8) {
 				const titleMap = ["48", "64", "80"]
-				state.settings.maxTitleLength = titleMap[state.settings.sel.rows[2] - 5]
+				state.settings.maxTitleLength = titleMap[state.settings.sel.rows[0] - 5]
 				state.settings.status = `Max title length set to ${state.settings.maxTitleLength} characters.`
-			} else if (state.settings.sel.rows[2] < 11) {
+			} else if (state.settings.sel.rows[0] < 11) {
 				const sizeMap = ["small", "medium", "large"]
-				state.settings.labelSize = sizeMap[state.settings.sel.rows[2] - 8]
+				state.settings.labelSize = sizeMap[state.settings.sel.rows[0] - 8]
 				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
-			} else {
+			} else if (state.settings.sel.rows[0] < 13) {
 				const helpTextMap = ["normal", "minimal"]
-				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[2] - 11]
+				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[0] - 11]
 				state.settings.status = `Inline help text set to ${state.settings.helpTextMode}.`
+			} else {
+				const themeMap = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
+				state.settings.theme = themeMap[state.settings.sel.rows[0] - 13]
+				state.settings.status = `Theme set to ${state.settings.theme.replaceAll("-", " ")}.`
 			}
-		}
-		if (state.settings.sel.col === 3) {
-			const themeMap = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
-			state.settings.theme = themeMap[state.settings.sel.rows[3]]
-			state.settings.status = `Theme set to ${state.settings.theme.replaceAll("-", " ")}.`
 		}
 		await persistSettings()
 		applyUiSettings()
@@ -634,6 +629,7 @@ export function createEventHandlers({
 		if (
 			state.view !== "mark-create" &&
 			state.view !== "marks" &&
+			state.view !== "settings" &&
 			!state.settings.editing &&
 			!state.search.active &&
 			!(state.view === "marks" && state.marks.mode === "quick") &&
