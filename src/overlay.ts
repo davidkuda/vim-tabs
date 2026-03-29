@@ -16,6 +16,7 @@ import { getLabelFontSize, getUiTheme, getWindowColor } from "./shared/window-co
 declare global {
 	interface Window {
 		__vtmCloseOverlay?: () => void
+		__vtmDiscardOverlay?: () => void
 		__VTM_SESSION_ID?: string
 	}
 }
@@ -73,13 +74,16 @@ if (!document.getElementById("vtm-backdrop")) {
 		})
 		let messageListener = null
 		let closed = false
+		let passiveDiscardStarted = false
 
 		const cleanupOverlay = () => {
 			if (closed) return
 			closed = true
 			events.detachListeners()
 			if (messageListener) chrome.runtime.onMessage.removeListener(messageListener)
+			document.removeEventListener("visibilitychange", handleVisibilityChange)
 			delete window.__vtmCloseOverlay
+			delete window.__vtmDiscardOverlay
 			delete window.__VTM_SESSION_ID
 		}
 
@@ -94,13 +98,39 @@ if (!document.getElementById("vtm-backdrop")) {
 			backdrop.remove()
 		}
 
+		window.__vtmDiscardOverlay = () => {
+			if (closed) return
+			cleanupOverlay()
+			backdrop.remove()
+		}
+
+		const requestPassiveDiscard = () => {
+			if (closed || passiveDiscardStarted) return
+			passiveDiscardStarted = true
+			chrome.runtime.sendMessage({ type: "discardSession", sessionId })
+		}
+
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "hidden") {
+				requestPassiveDiscard()
+			}
+		}
+
 		messageListener = (message, _sender, sendResponse) => {
-			if (message.type !== "closeOverlay") return
-			window.__vtmCloseOverlay?.()
-			sendResponse({ closed: true })
-			return true
+			if (message.type === "closeOverlay") {
+				window.__vtmCloseOverlay?.()
+				sendResponse({ closed: true })
+				return true
+			}
+			if (message.type === "discardOverlay") {
+				window.__vtmDiscardOverlay?.()
+				sendResponse({ closed: true })
+				return true
+			}
+			return
 		}
 		chrome.runtime.onMessage.addListener(messageListener)
+		document.addEventListener("visibilitychange", handleVisibilityChange)
 
 		const observer = new MutationObserver(() => {
 			if (!document.getElementById("vtm-backdrop")) {

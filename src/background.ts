@@ -12,6 +12,7 @@ import {
 	clearOverlaySession,
 	createOverlaySession,
 	getOverlaySession,
+	listOverlaySessions,
 	updateOverlayFallback,
 	updateOverlayHostTab,
 } from "./background/session-manager.js"
@@ -29,19 +30,32 @@ async function getFocusedTab() {
 }
 
 async function closeInjectedOverlay(tabId: number | undefined) {
+	return closeOverlayUi(tabId, false)
+}
+
+async function closeOverlayUi(
+	tabId: number | undefined,
+	discard = false,
+) {
 	if (!tabId) return false
 
 	try {
-		const response = await chrome.tabs.sendMessage(tabId, { type: "closeOverlay" })
+		const response = await chrome.tabs.sendMessage(tabId, {
+			type: discard ? "discardOverlay" : "closeOverlay",
+		})
 		if (response?.closed) return true
 	} catch {}
 
 	try {
 		const [result] = await chrome.scripting.executeScript({
 			target: { tabId },
-			func: () => {
-				if (typeof window.__vtmCloseOverlay === "function") {
-					window.__vtmCloseOverlay()
+			func: (shouldDiscard) => {
+				const closeFn = shouldDiscard
+					? (window as Window & { __vtmDiscardOverlay?: () => void })
+							.__vtmDiscardOverlay
+					: (window as Window & { __vtmCloseOverlay?: () => void }).__vtmCloseOverlay
+				if (typeof closeFn === "function") {
+					closeFn()
 					return true
 				}
 				const backdrop = document.getElementById("vtm-backdrop")
@@ -51,6 +65,7 @@ async function closeInjectedOverlay(tabId: number | undefined) {
 				}
 				return false
 			},
+			args: [discard],
 		})
 		return !!result?.result
 	} catch {
@@ -70,6 +85,22 @@ async function teardownOverlaySession(sessionId: string | undefined) {
 	if (!sessionId) return
 	await clearOverlayArtifacts(sessionId)
 	await clearOverlaySession(sessionId)
+}
+
+async function dismissOverlaySession(sessionId: string | undefined) {
+	if (!sessionId) return
+	const session = await getOverlaySession(sessionId)
+	if (!session) return
+
+	await closeOverlayUi(session.hostTabId || session.ownerTabId, true)
+
+	if (session.fallback?.tabId) {
+		try {
+			await chrome.tabs.remove(session.fallback.tabId)
+		} catch {}
+	}
+
+	await teardownOverlaySession(sessionId)
 }
 
 async function launchOverlay(tab, options = {}) {
@@ -142,6 +173,7 @@ async function handleCommit(msg, senderTab) {
 	const session = await getOverlaySession(sessionId)
 	if (!session) return
 
+	await clearOverlayArtifacts(sessionId)
 	await applyActions(msg.actions || [])
 
 	if (msg.postFocus) {
@@ -213,6 +245,49 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 })
 
+chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
+	const sessions = await listOverlaySessions()
+	await Promise.all(
+		sessions
+			.filter((session) => {
+				const hostTabId = session.hostTabId || session.ownerTabId
+				const previewHelperIds = session.preview.entries.map((entry) => entry.helperTabId)
+				return (
+					tabId !== hostTabId &&
+					tabId !== session.fallback?.tabId &&
+					!previewHelperIds.includes(tabId)
+				)
+			})
+			.map((session) => dismissOverlaySession(session.id)),
+	)
+})
+
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+	if (windowId === chrome.windows.WINDOW_ID_NONE) return
+	const sessions = await listOverlaySessions()
+	await Promise.all(
+		sessions
+			.filter((session) => session.ownerWindowId !== windowId)
+			.map((session) => dismissOverlaySession(session.id)),
+	)
+})
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+	const sessions = await listOverlaySessions()
+	await Promise.all(
+		sessions
+			.filter((session) => {
+				const hostTabId = session.hostTabId || session.ownerTabId
+				return (
+					tabId === session.ownerTabId ||
+					tabId === hostTabId ||
+					tabId === session.fallback?.tabId
+				)
+			})
+			.map((session) => teardownOverlaySession(session.id)),
+	)
+})
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (!isExtensionSender(sender)) {
 		return false
@@ -257,6 +332,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		getOverlaySession(msg.sessionId).then((session) => {
 			if (!isAllowedSessionSender(session, sender)) return
 			handleCommit(msg, sender?.tab)
+		})
+	}
+
+	if (msg.type === "discardSession") {
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (!isAllowedSessionSender(session, sender)) return
+			dismissOverlaySession(msg.sessionId)
 		})
 	}
 

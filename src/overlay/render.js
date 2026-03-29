@@ -1,5 +1,5 @@
 import { escapeHtml, formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
-import { createColumnPanel } from "../components/column-panel.js"
+import { createColumnPanel, prepareColumnPanel } from "../components/column-panel.js"
 import { createLinkCard } from "../components/link-card.js"
 import { getWindowColor } from "../shared/window-colors.js"
 import {
@@ -274,6 +274,7 @@ export function createRenderer(state, columns, footer) {
 			col.setAttribute("data-accent", windowColor.accent)
 			col.setAttribute("data-border", windowColor.accent)
 			col.setAttribute("data-surface", windowColor.surface)
+			prepareColumnPanel(col)
 			columns.appendChild(col)
 			const body = col.body || col
 

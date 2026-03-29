@@ -50,6 +50,10 @@ export async function getOverlaySession(sessionId: string | undefined) {
 	return sessions[sessionId] || null
 }
 
+export async function listOverlaySessions() {
+	return Object.values(await readSessions())
+}
+
 export async function updateOverlayPreview(
 	sessionId: string,
 	preview: PreviewState,
