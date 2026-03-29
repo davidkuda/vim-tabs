@@ -11,7 +11,7 @@ import { getCommandPaletteItems } from "./commands.js"
 import type { OverlayControllerContext } from "./controllers/types.js"
 import { curTab } from "./state.js"
 
-const settingsColumnCounts = [() => 0, () => 4, () => 7, () => 3]
+const settingsColumnCounts = [() => 0, () => 4, () => 13, () => 3]
 
 export function createEventHandlers({
 	backdrop,
@@ -138,6 +138,8 @@ export function createEventHandlers({
 			markAlphaOrder: state.settings.markAlphaOrder,
 			helpTextMode: state.settings.helpTextMode,
 			density: state.settings.density,
+			columnWidth: state.settings.columnWidth,
+			maxTitleLength: state.settings.maxTitleLength,
 			labelSize: state.settings.labelSize,
 			theme: state.settings.theme,
 		})
@@ -349,6 +351,8 @@ export function createEventHandlers({
 		state.settings.markAlphaOrder = settings.markAlphaOrder
 		state.settings.helpTextMode = settings.helpTextMode
 		state.settings.density = settings.density
+		state.settings.columnWidth = settings.columnWidth
+		state.settings.maxTitleLength = settings.maxTitleLength
 		state.settings.labelSize = settings.labelSize
 		state.settings.theme = settings.theme
 		clampSettingsSelection()
@@ -447,12 +451,20 @@ export function createEventHandlers({
 					state.settings.sel.rows[2] === 0 ? "comfortable" : "compact"
 				state.settings.status = `Density set to ${state.settings.density}.`
 			} else if (state.settings.sel.rows[2] < 5) {
+				const widthMap = ["320", "360", "420"]
+				state.settings.columnWidth = widthMap[state.settings.sel.rows[2] - 2]
+				state.settings.status = `Column width set to ${state.settings.columnWidth}px.`
+			} else if (state.settings.sel.rows[2] < 8) {
+				const titleMap = ["48", "64", "80"]
+				state.settings.maxTitleLength = titleMap[state.settings.sel.rows[2] - 5]
+				state.settings.status = `Max title length set to ${state.settings.maxTitleLength} characters.`
+			} else if (state.settings.sel.rows[2] < 11) {
 				const sizeMap = ["small", "medium", "large"]
-				state.settings.labelSize = sizeMap[state.settings.sel.rows[2] - 2]
+				state.settings.labelSize = sizeMap[state.settings.sel.rows[2] - 8]
 				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
 			} else {
 				const helpTextMap = ["normal", "minimal"]
-				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[2] - 5]
+				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[2] - 11]
 				state.settings.status = `Inline help text set to ${state.settings.helpTextMode}.`
 			}
 		}

@@ -59,6 +59,8 @@ export interface SettingsData {
 	excludedDomains: string[]
 	overlayMode: boolean
 	density: "comfortable" | "compact"
+	columnWidth: "320" | "360" | "420"
+	maxTitleLength: "48" | "64" | "80"
 	labelSize: "small" | "medium" | "large"
 	theme: "rose-pine" | "rose-pine-moon" | "rose-pine-dawn"
 	quickMarkSort: "recent" | "frequent"

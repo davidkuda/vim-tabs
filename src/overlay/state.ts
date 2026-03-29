@@ -104,6 +104,8 @@ export function createState(): OverlayState {
 			returnView: "tabs",
 			status: "",
 			density: "comfortable",
+			columnWidth: "360",
+			maxTitleLength: "64",
 			labelSize: "medium",
 			theme: "rose-pine-moon",
 			quickMarkSort: "frequent",

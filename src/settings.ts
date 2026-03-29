@@ -8,6 +8,8 @@ const state = {
 	excludedDomains: [],
 	overlayMode: true,
 	density: "comfortable",
+	columnWidth: "360",
+	maxTitleLength: "64",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
 	quickMarkSort: "frequent",
@@ -26,6 +28,8 @@ async function persist() {
 		excludedDomains: state.excludedDomains,
 		overlayMode: state.overlayMode,
 		density: state.density,
+		columnWidth: state.columnWidth,
+		maxTitleLength: state.maxTitleLength,
 		labelSize: state.labelSize,
 		theme: state.theme,
 		quickMarkSort: state.quickMarkSort,
@@ -76,6 +80,42 @@ function render() {
 				<div class="vtm-settings-note-copy" id="vtm-overlay-copy"></div>
 				<button class="vtm-settings-button" id="vtm-overlay-button" type="button"></button>
 			</div>
+			<div class="vtm-settings-note">
+				<div class="vtm-settings-note-title">Layout</div>
+				<div class="vtm-settings-grid">
+					<label class="vtm-settings-field">
+						<span>Density</span>
+						<select class="vtm-settings-select" id="vtm-density-select">
+							<option value="comfortable">Comfortable</option>
+							<option value="compact">Compact</option>
+						</select>
+					</label>
+					<label class="vtm-settings-field">
+						<span>Column width</span>
+						<select class="vtm-settings-select" id="vtm-column-width-select">
+							<option value="320">320px</option>
+							<option value="360">360px</option>
+							<option value="420">420px</option>
+						</select>
+					</label>
+					<label class="vtm-settings-field">
+						<span>Max title length</span>
+						<select class="vtm-settings-select" id="vtm-title-length-select">
+							<option value="48">48 chars</option>
+							<option value="64">64 chars</option>
+							<option value="80">80 chars</option>
+						</select>
+					</label>
+					<label class="vtm-settings-field">
+						<span>Window label size</span>
+						<select class="vtm-settings-select" id="vtm-label-size-select">
+							<option value="small">Small</option>
+							<option value="medium">Medium</option>
+							<option value="large">Large</option>
+						</select>
+					</label>
+				</div>
+			</div>
 			<div class="vtm-settings-status" id="vtm-settings-status"></div>
 		</section>
 	`
@@ -86,6 +126,10 @@ function render() {
 	const status = document.getElementById("vtm-settings-status")
 	const overlayCopy = document.getElementById("vtm-overlay-copy")
 	const overlayButton = document.getElementById("vtm-overlay-button") as HTMLButtonElement | null
+	const densitySelect = document.getElementById("vtm-density-select") as HTMLSelectElement | null
+	const columnWidthSelect = document.getElementById("vtm-column-width-select") as HTMLSelectElement | null
+	const titleLengthSelect = document.getElementById("vtm-title-length-select") as HTMLSelectElement | null
+	const labelSizeSelect = document.getElementById("vtm-label-size-select") as HTMLSelectElement | null
 	if (status) status.textContent = state.status
 	if (overlayCopy) {
 		overlayCopy.textContent = state.overlayMode
@@ -97,6 +141,10 @@ function render() {
 			? "Use standalone page instead"
 			: "Use overlay by default"
 	}
+	if (densitySelect) densitySelect.value = state.density
+	if (columnWidthSelect) columnWidthSelect.value = state.columnWidth
+	if (titleLengthSelect) titleLengthSelect.value = state.maxTitleLength
+	if (labelSizeSelect) labelSizeSelect.value = state.labelSize
 
 	form?.addEventListener("submit", async (event) => {
 		event.preventDefault()
@@ -113,6 +161,26 @@ function render() {
 				? "Overlay mode enabled."
 				: "Standalone page mode enabled.",
 		)
+	})
+	densitySelect?.addEventListener("change", async () => {
+		state.density = densitySelect.value as typeof state.density
+		await persist()
+		setStatus(`Density set to ${state.density}.`)
+	})
+	columnWidthSelect?.addEventListener("change", async () => {
+		state.columnWidth = columnWidthSelect.value as typeof state.columnWidth
+		await persist()
+		setStatus(`Column width set to ${state.columnWidth}px.`)
+	})
+	titleLengthSelect?.addEventListener("change", async () => {
+		state.maxTitleLength = titleLengthSelect.value as typeof state.maxTitleLength
+		await persist()
+		setStatus(`Max title length set to ${state.maxTitleLength} characters.`)
+	})
+	labelSizeSelect?.addEventListener("change", async () => {
+		state.labelSize = labelSizeSelect.value as typeof state.labelSize
+		await persist()
+		setStatus(`Window label size set to ${state.labelSize}.`)
 	})
 
 	if (!state.excludedDomains.length) {
@@ -142,6 +210,8 @@ getSettings().then((settings) => {
 	state.excludedDomains = settings.excludedDomains || []
 	state.overlayMode = settings.overlayMode
 	state.density = settings.density
+	state.columnWidth = settings.columnWidth
+	state.maxTitleLength = settings.maxTitleLength
 	state.labelSize = settings.labelSize
 	state.theme = settings.theme
 	state.quickMarkSort = settings.quickMarkSort

@@ -150,6 +150,8 @@ if (!document.getElementById("vtm-backdrop")) {
 
 			state.settings.excludedDomains = bootstrap.settings.excludedDomains || []
 			state.settings.density = bootstrap.settings.density
+			state.settings.columnWidth = bootstrap.settings.columnWidth
+			state.settings.maxTitleLength = bootstrap.settings.maxTitleLength
 			state.settings.labelSize = bootstrap.settings.labelSize
 			state.settings.theme = bootstrap.settings.theme
 			state.settings.quickMarkSort = bootstrap.settings.quickMarkSort

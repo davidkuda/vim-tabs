@@ -20,6 +20,40 @@ const layoutOptions = {
 			subtitle: "Denser layout with more tabs on screen",
 		},
 	],
+	columnWidth: [
+		{
+			value: "320",
+			title: "320px columns",
+			subtitle: "Tighter layout with more windows visible",
+		},
+		{
+			value: "360",
+			title: "360px columns",
+			subtitle: "Balanced width for most tab titles",
+		},
+		{
+			value: "420",
+			title: "420px columns",
+			subtitle: "Wider columns with more room for long titles",
+		},
+	],
+	maxTitleLength: [
+		{
+			value: "48",
+			title: "48 character titles",
+			subtitle: "Truncate earlier for tighter, quieter rows",
+		},
+		{
+			value: "64",
+			title: "64 character titles",
+			subtitle: "Balanced title length before ellipsis",
+		},
+		{
+			value: "80",
+			title: "80 character titles",
+			subtitle: "Show longer titles when columns allow it",
+		},
+	],
 	labelSize: [
 		{
 			value: "small",
@@ -620,6 +654,20 @@ export function createRenderer(state, columns, footer) {
 			return col
 		}
 
+		const appendSettingsGroup = (column, title, cards) => {
+			const group = document.createElement("section")
+			group.className = "vtm-settings-group"
+			const heading = document.createElement("div")
+			heading.className = "vtm-settings-group-title"
+			heading.textContent = title
+			group.appendChild(heading)
+			const body = document.createElement("div")
+			body.className = "vtm-settings-group-cards"
+			cards.forEach((card) => body.appendChild(card))
+			group.appendChild(body)
+			column.appendChild(group)
+		}
+
 		const hostnamesColumn = createColumn("Excluded Hostnames", "#d7827e", 0)
 		const hostnamesIntro = document.createElement("div")
 		hostnamesIntro.className = "vtm-settings-note"
@@ -663,7 +711,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		const quickMarksColumn = createColumn("Quick Marks", "#286983", 1)
-		quickMarkSortOptions.forEach((item, index) => {
+		const quickMarkSortCards = quickMarkSortOptions.map((item, index) => {
 			const card = document.createElement("div")
 			card.className = "vtm-card vtm-settings-card"
 			card.dataset.col = "1"
@@ -677,9 +725,9 @@ export function createRenderer(state, columns, footer) {
 					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
 				</div>
 			`
-			quickMarksColumn.appendChild(card)
+			return card
 		})
-		markAlphaOrderOptions.forEach((item, index) => {
+		const quickMarkAlphaCards = markAlphaOrderOptions.map((item, index) => {
 			const card = document.createElement("div")
 			card.className = "vtm-card vtm-settings-card"
 			card.dataset.col = "1"
@@ -693,39 +741,60 @@ export function createRenderer(state, columns, footer) {
 					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
 				</div>
 			`
-			quickMarksColumn.appendChild(card)
+			return card
 		})
+		appendSettingsGroup(quickMarksColumn, "Quick mark ranking", quickMarkSortCards)
+		appendSettingsGroup(quickMarksColumn, "Alphabetical order", quickMarkAlphaCards)
 
 		const layoutColumn = createColumn("Layout", "#56949f", 2)
-		const layoutCards = [
-			...layoutOptions.density.map((option) => ({
-				...option,
-				active: state.settings.density === option.value,
-			})),
-			...layoutOptions.labelSize.map((option) => ({
-				...option,
-				active: state.settings.labelSize === option.value,
-			})),
-			...layoutOptions.helpTextMode.map((option) => ({
-				...option,
-				active: state.settings.helpTextMode === option.value,
-			})),
-		]
+		let layoutRowIndex = 0
+		const createLayoutCards = (options, activeValue) =>
+			options.map((item) => {
+				const card = document.createElement("div")
+				card.className = "vtm-card vtm-settings-card"
+				card.dataset.col = "2"
+				card.dataset.row = `${layoutRowIndex++}`
+				if (activeValue === item.value) card.classList.add("vtm-settings-active")
+				card.innerHTML = `
+					<div class="vtm-meta">
+						<span class="vtm-title">${escapeHtml(item.title)}</span>
+						<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+					</div>
+				`
+				return card
+			})
 
-		layoutCards.forEach((item, index) => {
-			const card = document.createElement("div")
-			card.className = "vtm-card vtm-settings-card"
-			card.dataset.col = "2"
-			card.dataset.row = `${index}`
-			if (item.active) card.classList.add("vtm-settings-active")
-			card.innerHTML = `
-				<div class="vtm-meta">
-					<span class="vtm-title">${escapeHtml(item.title)}</span>
-					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
-				</div>
-			`
-			layoutColumn.appendChild(card)
-		})
+		appendSettingsGroup(
+			layoutColumn,
+			"Spacing",
+			createLayoutCards(layoutOptions.density, state.settings.density),
+		)
+		appendSettingsGroup(
+			layoutColumn,
+			"Column width",
+			createLayoutCards(layoutOptions.columnWidth, state.settings.columnWidth),
+		)
+		appendSettingsGroup(
+			layoutColumn,
+			"Max title length",
+			createLayoutCards(
+				layoutOptions.maxTitleLength,
+				state.settings.maxTitleLength,
+			),
+		)
+		appendSettingsGroup(
+			layoutColumn,
+			"Window label",
+			createLayoutCards(layoutOptions.labelSize, state.settings.labelSize),
+		)
+		appendSettingsGroup(
+			layoutColumn,
+			"Inline help",
+			createLayoutCards(
+				layoutOptions.helpTextMode,
+				state.settings.helpTextMode,
+			),
+		)
 
 		const themeColumn = createColumn("Theme", "#907aa9", 3)
 		themeOptions.forEach((item, index) => {

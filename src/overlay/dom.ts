@@ -93,7 +93,7 @@ export function clearOverlayFrame(backdrop: HTMLDivElement) {
 export function applyOverlayTheme(
 	backdrop: HTMLDivElement,
 	modal: HTMLDivElement,
-	settings: Pick<SettingsData, "density">,
+	settings: Pick<SettingsData, "density" | "columnWidth" | "maxTitleLength">,
 	uiTheme: {
 		colorScheme: "dark" | "light"
 		text: { primary: string; muted: string; subtle: string }
@@ -123,7 +123,11 @@ export function applyOverlayTheme(
 	)
 	backdrop.style.setProperty(
 		"--vtm-col-min-width",
-		density === "compact" ? "220px" : "250px",
+		`${settings.columnWidth || "360"}px`,
+	)
+	backdrop.style.setProperty(
+		"--vtm-title-max-ch",
+		settings.maxTitleLength || "64",
 	)
 	backdrop.style.setProperty("--vtm-col-gap", density === "compact" ? "10px" : "14px")
 	backdrop.style.setProperty(

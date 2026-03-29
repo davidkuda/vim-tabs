@@ -10,7 +10,8 @@
 	--vtm-modal-ring: rgba(255, 255, 255, 0.08);
 	--vtm-card-padding-y: 10px;
 	--vtm-card-padding-x: 12px;
-	--vtm-col-min-width: 250px;
+	--vtm-col-min-width: 360px;
+	--vtm-title-max-ch: 64;
 	--vtm-col-gap: 14px;
 	--vtm-col-padding: 12px;
 	position: fixed;
@@ -118,11 +119,17 @@
 
 #vtm-columns {
 	flex: 1 1 auto;
+	min-width: 0;
 	display: flex;
 	flex-direction: row;
 	gap: var(--vtm-col-gap);
 	overflow-x: auto;
 	padding: 2px 2px 2px 0;
+}
+
+#vtm-columns > * {
+	min-width: 0;
+	max-width: 100%;
 }
 
 #vtm-columns::-webkit-scrollbar {
@@ -210,12 +217,15 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	min-width: var(--vtm-col-min-width);
-	flex: 1 0 auto;
+	width: min(100%, var(--vtm-col-min-width));
+	min-width: min(100%, var(--vtm-col-min-width));
+	max-width: min(100%, var(--vtm-col-min-width));
+	flex: 0 0 min(100%, var(--vtm-col-min-width));
 	border: 1px solid transparent;
 	border-radius: 20px;
 	padding: var(--vtm-col-padding);
 	box-sizing: border-box;
+	overflow: hidden;
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -237,9 +247,13 @@
 	align-items: center;
 	gap: 12px;
 	padding: var(--vtm-card-padding-y) var(--vtm-card-padding-x);
+	width: 100%;
+	max-width: 100%;
 	background: rgba(255, 255, 255, 0.028);
 	border: 1px solid rgba(255, 255, 255, 0.045);
 	border-radius: 14px;
+	box-sizing: border-box;
+	overflow: hidden;
 	user-select: none;
 	transition:
 		background 0.18s ease,
@@ -311,6 +325,7 @@
 	align-items: center;
 	gap: 10px;
 	min-width: 0;
+	max-width: 100%;
 }
 
 .vtm-title {
@@ -318,6 +333,8 @@
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	flex: 1 1 auto;
+	min-width: 0;
+	max-width: min(100%, calc(var(--vtm-title-max-ch) * 1ch));
 	font-size: 13px;
 	font-weight: 400;
 	line-height: 1.35;
@@ -351,6 +368,8 @@
 }
 
 .vtm-url {
+	display: block;
+	max-width: min(100%, calc(var(--vtm-title-max-ch) * 1ch));
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -698,6 +717,33 @@
 
 .vtm-settings-card {
 	min-height: 56px;
+}
+
+.vtm-settings-group {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	border-radius: 18px;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+		rgba(57, 53, 82, 0.22);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.vtm-settings-group-title {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--vtm-text-subtle);
+}
+
+.vtm-settings-group-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .vtm-settings-draft {
