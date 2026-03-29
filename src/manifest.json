@@ -8,29 +8,29 @@
 	"commands": {
 		"open-manager": {
 			"suggested_key": {
-				"default": "Ctrl+E",
-				"mac": "Command+E"
+				"default": "Ctrl+Shift+E",
+				"mac": "Ctrl+Shift+E"
 			},
 			"description": "Open VimTabs"
 		},
 		"stash-window": {
 			"suggested_key": {
-				"default": "Ctrl+S",
-				"mac": "Command+S"
+				"default": "Ctrl+Shift+S",
+				"mac": "Ctrl+Shift+S"
 			},
 			"description": "Stash current window"
 		},
 		"open-marks": {
 			"suggested_key": {
-				"default": "Ctrl+M",
-				"mac": "Command+Shift+M"
+				"default": "Ctrl+Shift+M",
+				"mac": "Ctrl+Shift+M"
 			},
 			"description": "Open marks"
 		},
 		"add-current-mark": {
 			"suggested_key": {
 				"default": "Ctrl+Shift+Y",
-				"mac": "Command+Shift+Y"
+				"mac": "Ctrl+Shift+Y"
 			},
 			"description": "Mark current page"
 		}
