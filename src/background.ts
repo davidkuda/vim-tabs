@@ -12,6 +12,8 @@ import {
 	clearOverlaySession,
 	createOverlaySession,
 	getOverlaySession,
+	updateOverlayFallback,
+	updateOverlayHostTab,
 } from "./background/session-manager.js"
 import { openSettingsPage, openStashPage, stashWindow } from "./background/stash.js"
 import { deleteMark, getMarksData, openMark, setMark } from "./shared/marks.js"
@@ -83,6 +85,9 @@ async function launchOverlay(tab, options = {}) {
 		return
 	}
 
+	const settings = await getSettings()
+	const overlayEnabled = settings.overlayMode
+
 	if (await closeInjectedOverlay(tab.id)) {
 		return
 	}
@@ -94,18 +99,36 @@ async function launchOverlay(tab, options = {}) {
 		minimalPrompt: !!options.minimalPrompt,
 	}, tab.id, tab.windowId)
 
-	const { wins } = await getData(session.id)
 	let overlayHostTabId = tab.id
 
-	try {
-		await injectOverlay(tab.id, session.id)
-	} catch {
-		const fallback = await openFallbackPage(tab, session.id)
-		overlayHostTabId = fallback.id
-	}
+	if (overlayEnabled) {
+		try {
+			await injectOverlay(tab.id, session.id)
+			await updateOverlayHostTab(session.id, tab.id)
+		} catch {
+			const fallback = await openFallbackPage(tab, session.id)
+			overlayHostTabId = fallback.id
+			await updateOverlayHostTab(session.id, fallback.id)
+		}
 
-	if (!options.minimalPrompt) {
-		await showWindowPreviews(session.id, wins, tab.windowId)
+		if (!options.minimalPrompt) {
+			const { wins } = await getData(session.id)
+			await showWindowPreviews(session.id, wins as never, tab.windowId)
+		}
+	} else {
+		const params = new URLSearchParams({ sessionId: session.id })
+		const overlayTab = await chrome.tabs.create({
+			windowId: tab.windowId,
+			url: `${chrome.runtime.getURL("manager.html")}?${params.toString()}`,
+			active: true,
+		})
+		overlayHostTabId = overlayTab.id
+		await updateOverlayHostTab(session.id, overlayTab.id)
+		await updateOverlayFallback(session.id, {
+			tabId: overlayTab.id,
+			originalTabId: tab.id,
+			windowId: tab.windowId,
+		})
 	}
 
 	try {
@@ -119,8 +142,6 @@ async function handleCommit(msg, senderTab) {
 	const session = await getOverlaySession(sessionId)
 	if (!session) return
 
-	await clearWindowBorders(session.preview.borderTabIds.map((id) => ({ id })))
-	await clearPreviewArtifacts(sessionId)
 	await applyActions(msg.actions || [])
 
 	if (msg.postFocus) {
@@ -147,6 +168,7 @@ function isAllowedSessionSender(session, sender) {
 	const senderTabId = sender?.tab?.id
 	if (!senderTabId) return false
 	return senderTabId === session.ownerTabId || senderTabId === session.fallback?.tabId
+		|| senderTabId === session.hostTabId
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -267,10 +289,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	if (msg.type === "stashWindow") {
 		getOverlaySession(msg.sessionId).then((session) => {
 			if (msg.sessionId && !isAllowedSessionSender(session, sender)) return
-			clearOverlayArtifacts(msg.sessionId).then(() =>
-				stashWindow(msg.windowId, sender?.tab, msg.sessionId).then(() =>
-					clearOverlaySession(msg.sessionId),
-				),
+			stashWindow(msg.windowId, sender?.tab, msg.sessionId).then(() =>
+				clearOverlaySession(msg.sessionId),
 			)
 		})
 	}

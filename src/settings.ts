@@ -6,6 +6,7 @@ document.body.appendChild(root)
 
 const state = {
 	excludedDomains: [],
+	overlayMode: true,
 	density: "comfortable",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
@@ -23,6 +24,7 @@ function setStatus(message: string) {
 async function persist() {
 	await saveSettings({
 		excludedDomains: state.excludedDomains,
+		overlayMode: state.overlayMode,
 		density: state.density,
 		labelSize: state.labelSize,
 		theme: state.theme,
@@ -69,6 +71,11 @@ function render() {
 			</form>
 			<p class="vtm-settings-note">Use bare hostnames only. Paths are ignored automatically if you paste a full URL.</p>
 			<div class="vtm-settings-list" id="vtm-settings-list"></div>
+			<div class="vtm-settings-note" id="vtm-overlay-settings">
+				<div class="vtm-settings-note-title">Overlay Mode</div>
+				<div class="vtm-settings-note-copy" id="vtm-overlay-copy"></div>
+				<button class="vtm-settings-button" id="vtm-overlay-button" type="button"></button>
+			</div>
 			<div class="vtm-settings-status" id="vtm-settings-status"></div>
 		</section>
 	`
@@ -77,7 +84,19 @@ function render() {
 	const input = document.getElementById("vtm-domain-input") as HTMLInputElement | null
 	const list = document.getElementById("vtm-settings-list")
 	const status = document.getElementById("vtm-settings-status")
+	const overlayCopy = document.getElementById("vtm-overlay-copy")
+	const overlayButton = document.getElementById("vtm-overlay-button") as HTMLButtonElement | null
 	if (status) status.textContent = state.status
+	if (overlayCopy) {
+		overlayCopy.textContent = state.overlayMode
+			? "Overlay mode is enabled. VimTabs opens as an in-page overlay when possible."
+			: "Overlay mode is disabled. VimTabs opens in its own extension page."
+	}
+	if (overlayButton) {
+		overlayButton.textContent = state.overlayMode
+			? "Use standalone page instead"
+			: "Use overlay by default"
+	}
 
 	form?.addEventListener("submit", async (event) => {
 		event.preventDefault()
@@ -85,6 +104,15 @@ function render() {
 		if (input) input.value = ""
 		await addDomain(value)
 		input?.focus()
+	})
+	overlayButton?.addEventListener("click", async () => {
+		state.overlayMode = !state.overlayMode
+		await persist()
+		setStatus(
+			state.overlayMode
+				? "Overlay mode enabled."
+				: "Standalone page mode enabled.",
+		)
 	})
 
 	if (!state.excludedDomains.length) {
@@ -112,6 +140,7 @@ function render() {
 
 getSettings().then((settings) => {
 	state.excludedDomains = settings.excludedDomains || []
+	state.overlayMode = settings.overlayMode
 	state.density = settings.density
 	state.labelSize = settings.labelSize
 	state.theme = settings.theme

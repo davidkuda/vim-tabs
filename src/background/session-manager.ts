@@ -74,6 +74,18 @@ export async function updateOverlayFallback(
 	return session
 }
 
+export async function updateOverlayHostTab(
+	sessionId: string,
+	hostTabId: number | undefined,
+) {
+	const sessions = await readSessions()
+	const session = sessions[sessionId]
+	if (!session) return null
+	session.hostTabId = hostTabId
+	await writeSessions(sessions)
+	return session
+}
+
 export async function clearOverlaySession(sessionId: string | undefined) {
 	if (!sessionId) return
 	const sessions = await readSessions()

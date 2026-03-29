@@ -57,6 +57,7 @@ export interface MarksData {
 
 export interface SettingsData {
 	excludedDomains: string[]
+	overlayMode: boolean
 	density: "comfortable" | "compact"
 	labelSize: "small" | "medium" | "large"
 	theme: "rose-pine" | "rose-pine-moon" | "rose-pine-dawn"
@@ -113,6 +114,7 @@ export interface OverlaySession {
 	createdAt: number
 	ownerTabId: number
 	ownerWindowId: number
+	hostTabId?: number
 	context: OverlayContext
 	preview: PreviewState
 	fallback: FallbackState | null

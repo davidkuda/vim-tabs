@@ -3,7 +3,7 @@
 	"description": "Manage tabs with vim-inspired key bindings.",
 	"version": "0.1.0",
 	"manifest_version": 3,
-	"permissions": ["tabs", "scripting", "bookmarks", "storage"],
+	"permissions": ["tabs", "bookmarks", "storage", "scripting"],
 	"host_permissions": ["<all_urls>"],
 	"commands": {
 		"open-manager": {

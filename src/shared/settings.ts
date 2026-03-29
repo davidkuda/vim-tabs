@@ -18,6 +18,7 @@ export const SETTING_HELP_TEXT_MODES = ["normal", "minimal"] as const
 
 export const DEFAULT_SETTINGS: SettingsData = {
 	excludedDomains: [],
+	overlayMode: true,
 	density: "comfortable",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
@@ -38,6 +39,7 @@ export async function saveSettings(settings: Partial<SettingsData>) {
 	await chrome.storage.local.set({
 		[SETTINGS_KEY]: {
 			excludedDomains: normalizeDomains(settings.excludedDomains || []),
+			overlayMode: !!settings.overlayMode,
 			density: SETTING_DENSITIES.includes(settings.density as never)
 				? settings.density
 				: DEFAULT_SETTINGS.density,
