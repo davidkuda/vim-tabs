@@ -1,4 +1,4 @@
-import { formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
+import { escapeHtml, formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
 import { getWindowColor } from "../shared/window-colors.js"
 import {
 	compareMarkKeys as compareMarkKeysByPreference,
@@ -305,7 +305,7 @@ export function createRenderer(state, columns, footer) {
 		if (state.search.active) {
 			const matches = countMatches(state.search.query)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy"><code>/</code>${state.search.query || ""}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
+					<div class="vtm-footer-copy"><code>/</code>${escapeHtml(state.search.query || "")}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
 			`
 			return
 		}
@@ -313,7 +313,7 @@ export function createRenderer(state, columns, footer) {
 		if (state.search.lastQuery) {
 			const matches = countMatches(state.search.lastQuery)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
+					<div class="vtm-footer-copy">Search <code>/${escapeHtml(state.search.lastQuery)}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
 			`
 			return
 		}
@@ -556,7 +556,7 @@ export function createRenderer(state, columns, footer) {
 		if (state.search.active) {
 			const matches = countMatches(state.search.query)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy"><code>/</code>${state.search.query || ""}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
+				<div class="vtm-footer-copy"><code>/</code>${escapeHtml(state.search.query || "")}<span class="vtm-footer-meta">${matches} match${matches === 1 ? "" : "es"}</span></div>
 			`
 			return
 		}
@@ -564,7 +564,7 @@ export function createRenderer(state, columns, footer) {
 		if (state.search.lastQuery) {
 			const matches = countMatches(state.search.lastQuery)
 			footer.innerHTML = `
-				<div class="vtm-footer-copy">Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
+				<div class="vtm-footer-copy">Search <code>/${escapeHtml(state.search.lastQuery)}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.</div>
 			`
 			return
 		}

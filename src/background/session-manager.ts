@@ -24,12 +24,18 @@ export function createEmptyPreviewState(): PreviewState {
 	return { entries: [], borderTabIds: [] }
 }
 
-export async function createOverlaySession(context: OverlayContext) {
+export async function createOverlaySession(
+	context: OverlayContext,
+	ownerTabId: number,
+	ownerWindowId: number,
+) {
 	const sessions = await readSessions()
 	const sessionId = createSessionId()
 	sessions[sessionId] = {
 		id: sessionId,
 		createdAt: Date.now(),
+		ownerTabId,
+		ownerWindowId,
 		context,
 		preview: createEmptyPreviewState(),
 		fallback: null,

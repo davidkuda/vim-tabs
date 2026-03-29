@@ -11,6 +11,15 @@ export function formatUrl(url: string | undefined) {
 	}
 }
 
+export function escapeHtml(text: string | number | undefined | null) {
+	return `${text ?? ""}`
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;")
+}
+
 export function matchesTextQuery(
 	entry: { title?: string; url?: string },
 	query: string | undefined,

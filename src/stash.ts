@@ -1,5 +1,5 @@
 import { registerLinkCard } from "./components/link-card.js"
-import { getStashCounts, matchesTextQuery } from "./shared/ui.js"
+import { escapeHtml, getStashCounts, matchesTextQuery } from "./shared/ui.js"
 
 registerLinkCard()
 
@@ -146,10 +146,10 @@ registerLinkCard()
 		footer.className = "vtm-stash-footer"
 		if (state.search.active) {
 			const matches = countMatches(state.search.query)
-			footer.innerHTML = `<code>/</code>${state.search.query || ""} <span>${matches} match${matches === 1 ? "" : "es"}</span>`
+			footer.innerHTML = `<code>/</code>${escapeHtml(state.search.query || "")} <span>${matches} match${matches === 1 ? "" : "es"}</span>`
 		} else if (state.search.lastQuery) {
 			const matches = countMatches(state.search.lastQuery)
-			footer.innerHTML = `Search <code>/${state.search.lastQuery}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.`
+			footer.innerHTML = `Search <code>/${escapeHtml(state.search.lastQuery)}</code> active. Use <code>n</code> and <code>N</code> to jump through ${matches} match${matches === 1 ? "" : "es"}.`
 		} else {
 			footer.innerHTML = `Press <code>?</code> for stash help. Press <code>/</code> to search stashed tabs. Press <code>:</code> for settings.`
 		}

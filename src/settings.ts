@@ -69,13 +69,15 @@ function render() {
 			</form>
 			<p class="vtm-settings-note">Use bare hostnames only. Paths are ignored automatically if you paste a full URL.</p>
 			<div class="vtm-settings-list" id="vtm-settings-list"></div>
-			<div class="vtm-settings-status">${state.status}</div>
+			<div class="vtm-settings-status" id="vtm-settings-status"></div>
 		</section>
 	`
 
 	const form = document.getElementById("vtm-settings-form")
 	const input = document.getElementById("vtm-domain-input") as HTMLInputElement | null
 	const list = document.getElementById("vtm-settings-list")
+	const status = document.getElementById("vtm-settings-status")
+	if (status) status.textContent = state.status
 
 	form?.addEventListener("submit", async (event) => {
 		event.preventDefault()
@@ -94,13 +96,15 @@ function render() {
 		state.excludedDomains.forEach((domain) => {
 			const item = document.createElement("div")
 			item.className = "vtm-settings-item"
-			item.innerHTML = `
-				<div class="vtm-settings-domain">${domain}</div>
-				<button class="vtm-settings-remove" type="button">Remove</button>
-			`
-			item
-				.querySelector(".vtm-settings-remove")
-				?.addEventListener("click", () => removeDomain(domain))
+			const label = document.createElement("div")
+			label.className = "vtm-settings-domain"
+			label.textContent = domain
+			const button = document.createElement("button")
+			button.className = "vtm-settings-remove"
+			button.type = "button"
+			button.textContent = "Remove"
+			button.addEventListener("click", () => removeDomain(domain))
+			item.append(label, button)
 			list?.appendChild(item)
 		})
 	}

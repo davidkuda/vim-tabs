@@ -111,6 +111,8 @@ export interface FallbackState {
 export interface OverlaySession {
 	id: string
 	createdAt: number
+	ownerTabId: number
+	ownerWindowId: number
 	context: OverlayContext
 	preview: PreviewState
 	fallback: FallbackState | null

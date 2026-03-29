@@ -92,7 +92,7 @@ async function launchOverlay(tab, options = {}) {
 		initialMarksMode: options.initialMarksMode || "browse",
 		markTarget: options.markTarget || null,
 		minimalPrompt: !!options.minimalPrompt,
-	})
+	}, tab.id, tab.windowId)
 
 	const { wins } = await getData(session.id)
 	let overlayHostTabId = tab.id
@@ -138,6 +138,17 @@ async function handleCommit(msg, senderTab) {
 	await clearOverlaySession(sessionId)
 }
 
+function isExtensionSender(sender) {
+	return sender?.id === chrome.runtime.id
+}
+
+function isAllowedSessionSender(session, sender) {
+	if (!session || !isExtensionSender(sender)) return false
+	const senderTabId = sender?.tab?.id
+	if (!senderTabId) return false
+	return senderTabId === session.ownerTabId || senderTabId === session.fallback?.tabId
+}
+
 chrome.action.onClicked.addListener(async (tab) => {
 	await launchOverlay(tab)
 })
@@ -181,26 +192,32 @@ chrome.commands.onCommand.addListener(async (command) => {
 })
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+	if (!isExtensionSender(sender)) {
+		return false
+	}
+
 	if (msg.type === "getBootstrap") {
-		Promise.all([
-			getData(msg.sessionId),
-			getOverlaySession(msg.sessionId),
-			getMarksData(),
-			getSettings(),
-		]).then(([data, session, marksData, settings]) => {
-			sendResponse({
-				sessionId: msg.sessionId,
-				context: session?.context || {
+		Promise.all([getOverlaySession(msg.sessionId), getMarksData(), getSettings()]).then(
+			async ([session, marksData, settings]) => {
+				if (!isAllowedSessionSender(session, sender)) {
+					sendResponse(null)
+					return
+				}
+				const data = await getData(msg.sessionId)
+				sendResponse({
+					sessionId: msg.sessionId,
+					context: session?.context || {
 					initialView: "tabs",
 					initialMarksMode: "browse",
 					markTarget: null,
 					minimalPrompt: false,
 				},
 				data,
-				marks: marksData.marks || {},
-				settings,
-			})
-		})
+					marks: marksData.marks || {},
+					settings,
+				})
+			},
+		)
 		return true
 	}
 
@@ -215,17 +232,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "commit") {
-		handleCommit(msg, sender?.tab)
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (!isAllowedSessionSender(session, sender)) return
+			handleCommit(msg, sender?.tab)
+		})
 	}
 
 	if (msg.type === "openStash") {
-		teardownOverlaySession(msg.sessionId).then(() => openStashPage(sender?.tab?.windowId))
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (msg.sessionId && !isAllowedSessionSender(session, sender)) return
+			teardownOverlaySession(msg.sessionId).then(() =>
+				openStashPage(sender?.tab?.windowId),
+			)
+		})
 	}
 
 	if (msg.type === "openSettings") {
-		teardownOverlaySession(msg.sessionId).then(() =>
-			openSettingsPage(sender?.tab?.windowId),
-		)
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (msg.sessionId && !isAllowedSessionSender(session, sender)) return
+			teardownOverlaySession(msg.sessionId).then(() =>
+				openSettingsPage(sender?.tab?.windowId),
+			)
+		})
 	}
 
 	if (msg.type === "openStashedTab") {
@@ -237,11 +265,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "stashWindow") {
-		clearOverlayArtifacts(msg.sessionId).then(() =>
-			stashWindow(msg.windowId, sender?.tab, msg.sessionId).then(() =>
-				clearOverlaySession(msg.sessionId),
-			),
-		)
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (msg.sessionId && !isAllowedSessionSender(session, sender)) return
+			clearOverlayArtifacts(msg.sessionId).then(() =>
+				stashWindow(msg.windowId, sender?.tab, msg.sessionId).then(() =>
+					clearOverlaySession(msg.sessionId),
+				),
+			)
+		})
 	}
 
 	if (msg.type === "setMark") {
@@ -255,16 +286,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	}
 
 	if (msg.type === "openMark") {
-		teardownOverlaySession(msg.sessionId).then(() =>
-			openMark(msg.key, sender?.tab?.windowId).then(async (opened) => {
-				if (opened && msg.closeTabId) {
-					try {
-						await chrome.tabs.remove(msg.closeTabId)
-					} catch {}
-				}
-				sendResponse({ opened })
-			}),
-		)
+		getOverlaySession(msg.sessionId).then((session) => {
+			if (msg.sessionId && !isAllowedSessionSender(session, sender)) {
+				sendResponse({ opened: false })
+				return
+			}
+			teardownOverlaySession(msg.sessionId).then(() =>
+				openMark(msg.key, sender?.tab?.windowId).then(async (opened) => {
+					if (opened && msg.closeTabId) {
+						try {
+							await chrome.tabs.remove(msg.closeTabId)
+						} catch {}
+					}
+					sendResponse({ opened })
+				}),
+			)
+		})
 		return true
 	}
 })
