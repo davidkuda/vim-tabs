@@ -4,7 +4,7 @@ import type { OverlayState } from "./state.js"
 export function compareMarkKeys(
 	a: string,
 	b: string,
-	markAlphaOrder: OverlayState["settings"]["markAlphaOrder"],
+	markAlphaOrder: "small-first" | "capital-first",
 ) {
 	const foldedDiff = a.toLowerCase().localeCompare(b.toLowerCase())
 	if (foldedDiff !== 0) return foldedDiff
@@ -20,16 +20,20 @@ export function compareMarks(
 	b: MarkRecord,
 	state: OverlayState,
 ) {
+	const order = state.settings.quickMarksOrder
+	if (order === "small-first" || order === "capital-first") {
+		return compareMarkKeys(a.key, b.key, order)
+	}
 	const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
 	const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
-	if (state.settings.quickMarkSort === "recent") {
+	if (order === "recent") {
 		if (recentDiff !== 0) return recentDiff
 		if (usageDiff !== 0) return usageDiff
 	} else {
 		if (usageDiff !== 0) return usageDiff
 		if (recentDiff !== 0) return recentDiff
 	}
-	return compareMarkKeys(a.key, b.key, state.settings.markAlphaOrder)
+	return compareMarkKeys(a.key, b.key, "small-first")
 }
 
 export function getMarkColumns(state: OverlayState): [MarkRecord[], MarkRecord[]] {
@@ -38,7 +42,7 @@ export function getMarkColumns(state: OverlayState): [MarkRecord[], MarkRecord[]
 		state.marks.mode === "quick"
 			? [...marks].sort((a, b) => compareMarks(a, b, state))
 			: [...marks].sort((a, b) =>
-					compareMarkKeys(a.key, b.key, state.settings.markAlphaOrder),
+					compareMarkKeys(a.key, b.key, "small-first"),
 			  )
 	if (state.marks.mode === "quick") return [sorted, []]
 	return [

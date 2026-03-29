@@ -59,12 +59,10 @@ export interface SettingsData {
 	excludedDomains: string[]
 	overlayMode: boolean
 	density: "comfortable" | "compact"
-	columnWidth: "320" | "360" | "420"
-	maxTitleLength: "48" | "64" | "80"
+	columnWidth: "300" | "340" | "360" | "400" | "440"
 	labelSize: "small" | "medium" | "large"
 	theme: "rose-pine" | "rose-pine-moon" | "rose-pine-dawn"
-	quickMarkSort: "recent" | "frequent"
-	markAlphaOrder: "small-first" | "capital-first"
+	quickMarksOrder: "recent" | "frequent" | "small-first" | "capital-first"
 	helpTextMode: "normal" | "minimal"
 }
 

@@ -2,10 +2,7 @@ import { escapeHtml, formatUrl, getStashCounts, matchesTextQuery } from "../shar
 import { createColumnPanel, prepareColumnPanel } from "../components/column-panel.js"
 import { createLinkCard } from "../components/link-card.js"
 import { getWindowColor } from "../shared/window-colors.js"
-import {
-	compareMarkKeys as compareMarkKeysByPreference,
-	getMarkColumns as getMarkColumnsFromState,
-} from "./selectors.js"
+import { compareMarkKeys as compareMarkKeysByPreference, getMarkColumns as getMarkColumnsFromState } from "./selectors.js"
 
 const layoutOptions = {
 	density: [
@@ -22,9 +19,14 @@ const layoutOptions = {
 	],
 	columnWidth: [
 		{
-			value: "320",
-			title: "320px columns",
-			subtitle: "Tighter layout with more windows visible",
+			value: "300",
+			title: "300px columns",
+			subtitle: "Very compact layout with more windows visible",
+		},
+		{
+			value: "340",
+			title: "340px columns",
+			subtitle: "Compact but more forgiving for longer titles",
 		},
 		{
 			value: "360",
@@ -32,26 +34,14 @@ const layoutOptions = {
 			subtitle: "Balanced width for most tab titles",
 		},
 		{
-			value: "420",
-			title: "420px columns",
-			subtitle: "Wider columns with more room for long titles",
-		},
-	],
-	maxTitleLength: [
-		{
-			value: "48",
-			title: "48 character titles",
-			subtitle: "Truncate earlier for tighter, quieter rows",
+			value: "400",
+			title: "400px columns",
+			subtitle: "Comfortable width with more breathing room",
 		},
 		{
-			value: "64",
-			title: "64 character titles",
-			subtitle: "Balanced title length before ellipsis",
-		},
-		{
-			value: "80",
-			title: "80 character titles",
-			subtitle: "Show longer titles when columns allow it",
+			value: "440",
+			title: "440px columns",
+			subtitle: "Wide columns for long titles and fewer truncations",
 		},
 	],
 	labelSize: [
@@ -107,12 +97,12 @@ const quickMarkSortOptions = [
 	{
 		value: "recent",
 		title: "Most recent first",
-		subtitle: "Prioritize marks used most recently",
+		subtitle: "The mark you used most recently is at the top",
 	},
 	{
 		value: "frequent",
 		title: "Most frequent first",
-		subtitle: "Prioritize marks used most often",
+		subtitle: "The mark you navigate to most is at the top",
 	},
 ]
 
@@ -120,12 +110,12 @@ const markAlphaOrderOptions = [
 	{
 		value: "small-first",
 		title: "Lowercase first",
-		subtitle: "Sort a-z before A-Z",
+		subtitle: "Show all marks alphabetically, starting with lowercase letters",
 	},
 	{
 		value: "capital-first",
 		title: "Uppercase first",
-		subtitle: "Sort A-Z before a-z",
+		subtitle: "Show all marks alphabetically, starting with uppercase letters",
 	},
 ]
 
@@ -171,7 +161,7 @@ export function createRenderer(state, columns, footer) {
 	}
 
 	function compareMarkKeys(a, b) {
-		return compareMarkKeysByPreference(a, b, state.settings.markAlphaOrder)
+		return compareMarkKeysByPreference(a, b, "small-first")
 	}
 
 	function escapeHtml(text) {
@@ -698,14 +688,6 @@ export function createRenderer(state, columns, footer) {
 		)
 		appendSettingsGroup(
 			generalColumn,
-			"Max title length",
-			createGeneralCards(
-				layoutOptions.maxTitleLength,
-				state.settings.maxTitleLength,
-			),
-		)
-		appendSettingsGroup(
-			generalColumn,
 			"Window label",
 			createGeneralCards(layoutOptions.labelSize, state.settings.labelSize),
 		)
@@ -770,15 +752,16 @@ export function createRenderer(state, columns, footer) {
 		quickMarksIntro.className = "vtm-settings-note"
 		quickMarksIntro.innerHTML = `
 			<div class="vtm-settings-note-title">Tune how marks are ordered</div>
-			<div class="vtm-settings-note-copy">Choose whether quick marks prioritize recent use or frequent use, and decide whether lowercase or uppercase letters sort first in the marks views.</div>
+			<div class="vtm-settings-note-copy">Choose whether marks prioritize recent use or frequent use, or switch to a pure alphabetical view with lowercase or uppercase letters first.</div>
 		`
 		quickMarksColumn.appendChild(quickMarksIntro)
-		const quickMarkSortCards = quickMarkSortOptions.map((item, index) => {
+		const quickMarkCards = [...quickMarkSortOptions, ...markAlphaOrderOptions].map(
+			(item, index) => {
 			const card = document.createElement("div")
 			card.className = "vtm-card vtm-settings-card"
 			card.dataset.col = "2"
 			card.dataset.row = `${index}`
-			if (state.settings.quickMarkSort === item.value) {
+			if (state.settings.quickMarksOrder === item.value) {
 				card.classList.add("vtm-settings-active")
 			}
 			card.innerHTML = `
@@ -788,25 +771,9 @@ export function createRenderer(state, columns, footer) {
 				</div>
 			`
 			return card
-		})
-		const quickMarkAlphaCards = markAlphaOrderOptions.map((item, index) => {
-			const card = document.createElement("div")
-			card.className = "vtm-card vtm-settings-card"
-			card.dataset.col = "2"
-			card.dataset.row = `${index + quickMarkSortOptions.length}`
-			if (state.settings.markAlphaOrder === item.value) {
-				card.classList.add("vtm-settings-active")
-			}
-			card.innerHTML = `
-				<div class="vtm-meta">
-					<span class="vtm-title">${escapeHtml(item.title)}</span>
-					<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
-				</div>
-			`
-			return card
-		})
-		appendSettingsGroup(quickMarksColumn, "Quick mark ranking", quickMarkSortCards)
-		appendSettingsGroup(quickMarksColumn, "Alphabetical order", quickMarkAlphaCards)
+			},
+		)
+		appendSettingsGroup(quickMarksColumn, "Quick Marks Order", quickMarkCards)
 
 		wrap.appendChild(lane)
 		columns.appendChild(wrap)

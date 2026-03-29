@@ -11,9 +11,14 @@
 	--vtm-card-padding-y: 10px;
 	--vtm-card-padding-x: 12px;
 	--vtm-col-min-width: 360px;
-	--vtm-title-max-ch: 64;
 	--vtm-col-gap: 14px;
 	--vtm-col-padding: 12px;
+	--vtm-topbar-padding-bottom: 14px;
+	--vtm-footer-margin-top: 14px;
+	--vtm-footer-gap: 10px;
+	--vtm-footer-item-min-height: 36px;
+	--vtm-footer-item-padding-x: 10px;
+	--vtm-footer-item-gap: 10px;
 	position: fixed;
 	inset: 0;
 	backdrop-filter: blur(18px) saturate(0.85);
@@ -102,7 +107,7 @@
 #vtm-topbar {
 	display: flex;
 	align-items: center;
-	padding: 0 2px 14px;
+	padding: 0 2px var(--vtm-topbar-padding-bottom);
 }
 
 .vtm-topbar-title {
@@ -142,11 +147,11 @@
 }
 
 #vtm-footer {
-	margin-top: 14px;
+	margin-top: var(--vtm-footer-margin-top);
 	padding: 4px 2px 0;
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--vtm-footer-gap);
 }
 
 .vtm-footer-copy {
@@ -166,9 +171,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 10px;
-	min-height: 36px;
-	padding: 0 10px;
+	gap: var(--vtm-footer-item-gap);
+	min-height: var(--vtm-footer-item-min-height);
+	padding: 0 var(--vtm-footer-item-padding-x);
 	border-radius: 999px;
 	background: rgba(255, 255, 255, 0.035);
 	border: 1px solid rgba(255, 255, 255, 0.05);
@@ -334,7 +339,7 @@
 	text-overflow: ellipsis;
 	flex: 1 1 auto;
 	min-width: 0;
-	max-width: min(100%, calc(var(--vtm-title-max-ch) * 1ch));
+	max-width: 100%;
 	font-size: 13px;
 	font-weight: 400;
 	line-height: 1.35;
@@ -369,7 +374,7 @@
 
 .vtm-url {
 	display: block;
-	max-width: min(100%, calc(var(--vtm-title-max-ch) * 1ch));
+	max-width: 100%;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -726,6 +731,19 @@
 	min-height: 56px;
 }
 
+.vtm-settings-card:not(.vtm-selected):not(.vtm-settings-active) {
+	background: rgba(255, 255, 255, 0.02);
+	border-color: rgba(255, 255, 255, 0.04);
+}
+
+.vtm-settings-card:not(.vtm-selected):not(.vtm-settings-active) .vtm-title {
+	color: rgba(246, 240, 234, 0.88);
+}
+
+.vtm-settings-card:not(.vtm-selected):not(.vtm-settings-active) .vtm-url {
+	color: rgba(246, 240, 234, 0.42);
+}
+
 .vtm-settings-group {
 	display: flex;
 	flex-direction: column;
@@ -766,12 +784,31 @@
 }
 
 .vtm-settings-active:not(.vtm-selected) {
-	border-color: rgba(246, 193, 176, 0.26);
+	border-color: rgba(86, 148, 159, 0.46);
 	background: linear-gradient(
 		135deg,
-		rgba(215, 130, 126, 0.14),
-		rgba(40, 105, 131, 0.1)
+		rgba(64, 82, 110, 0.34),
+		rgba(86, 148, 159, 0.18)
 	);
+	box-shadow:
+		0 0 0 1px rgba(86, 148, 159, 0.12),
+		inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.vtm-settings-active:not(.vtm-selected) .vtm-title {
+	color: rgba(246, 240, 234, 0.96);
+}
+
+.vtm-settings-active:not(.vtm-selected) .vtm-url {
+	color: rgba(246, 240, 234, 0.6);
+}
+
+.vtm-settings-card.vtm-selected.vtm-settings-active {
+	border-color: rgba(246, 193, 176, 0.76);
+	box-shadow:
+		0 0 0 1px rgba(246, 193, 176, 0.34),
+		0 10px 22px rgba(0, 0, 0, 0.16),
+		inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .vtm-settings-empty {

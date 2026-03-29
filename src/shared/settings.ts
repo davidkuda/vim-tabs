@@ -3,16 +3,16 @@ import type { SettingsData } from "./types.js"
 const SETTINGS_KEY = "settingsData"
 
 export const SETTING_DENSITIES = ["comfortable", "compact"] as const
-export const SETTING_COLUMN_WIDTHS = ["320", "360", "420"] as const
-export const SETTING_MAX_TITLE_LENGTHS = ["48", "64", "80"] as const
+export const SETTING_COLUMN_WIDTHS = ["300", "340", "360", "400", "440"] as const
 export const SETTING_LABEL_SIZES = ["small", "medium", "large"] as const
 export const SETTING_THEMES = [
 	"rose-pine",
 	"rose-pine-moon",
 	"rose-pine-dawn",
 ] as const
-export const SETTING_QUICK_MARK_SORTS = ["recent", "frequent"] as const
-export const SETTING_MARK_ALPHA_ORDERS = [
+export const SETTING_QUICK_MARK_ORDERS = [
+	"recent",
+	"frequent",
 	"small-first",
 	"capital-first",
 ] as const
@@ -23,19 +23,23 @@ export const DEFAULT_SETTINGS: SettingsData = {
 	overlayMode: true,
 	density: "comfortable",
 	columnWidth: "360",
-	maxTitleLength: "64",
 	labelSize: "medium",
 	theme: "rose-pine-moon",
-	quickMarkSort: "frequent",
-	markAlphaOrder: "small-first",
+	quickMarksOrder: "frequent",
 	helpTextMode: "normal",
 }
 
 export async function getSettings(): Promise<SettingsData> {
 	const data = await chrome.storage.local.get(SETTINGS_KEY)
+	const raw = data[SETTINGS_KEY] || {}
+	const legacyQuickMarksOrder = raw.quickMarksOrder
+		|| (raw.markAlphaOrder && raw.markAlphaOrder !== DEFAULT_SETTINGS.quickMarksOrder
+			? raw.markAlphaOrder
+			: raw.quickMarkSort)
 	return {
 		...DEFAULT_SETTINGS,
-		...(data[SETTINGS_KEY] || {}),
+		...raw,
+		quickMarksOrder: legacyQuickMarksOrder || DEFAULT_SETTINGS.quickMarksOrder,
 	}
 }
 
@@ -55,27 +59,17 @@ export async function saveSettings(settings: Partial<SettingsData>) {
 			columnWidth: SETTING_COLUMN_WIDTHS.includes(merged.columnWidth as never)
 				? merged.columnWidth
 				: DEFAULT_SETTINGS.columnWidth,
-			maxTitleLength: SETTING_MAX_TITLE_LENGTHS.includes(
-				merged.maxTitleLength as never,
-			)
-				? merged.maxTitleLength
-				: DEFAULT_SETTINGS.maxTitleLength,
 			labelSize: SETTING_LABEL_SIZES.includes(merged.labelSize as never)
 				? merged.labelSize
 				: DEFAULT_SETTINGS.labelSize,
 			theme: SETTING_THEMES.includes(merged.theme as never)
 				? merged.theme
 				: DEFAULT_SETTINGS.theme,
-			quickMarkSort: SETTING_QUICK_MARK_SORTS.includes(
-				merged.quickMarkSort as never,
+			quickMarksOrder: SETTING_QUICK_MARK_ORDERS.includes(
+				merged.quickMarksOrder as never,
 			)
-				? merged.quickMarkSort
-				: DEFAULT_SETTINGS.quickMarkSort,
-			markAlphaOrder: SETTING_MARK_ALPHA_ORDERS.includes(
-				merged.markAlphaOrder as never,
-			)
-				? merged.markAlphaOrder
-				: DEFAULT_SETTINGS.markAlphaOrder,
+				? merged.quickMarksOrder
+				: DEFAULT_SETTINGS.quickMarksOrder,
 			helpTextMode: SETTING_HELP_TEXT_MODES.includes(
 				merged.helpTextMode as never,
 			)

@@ -105,6 +105,21 @@ test("getMarkColumns separates temporary and persistent marks", () => {
 	assert.equal(persistent[0].key, "A")
 })
 
+test("quick marks can use alphabetical ordering modes", () => {
+	const state = createState()
+	state.marks.mode = "quick"
+	state.settings.quickMarksOrder = "capital-first"
+	state.marks.items = {
+		a: { key: "a", live: true, title: "a", url: "https://a.test" },
+		A: { key: "A", persistent: true, title: "A", url: "https://b.test" },
+	}
+	const [sorted] = getMarkColumns(state)
+	assert.deepEqual(
+		sorted.map((mark) => mark.key),
+		["A", "a"],
+	)
+})
+
 test("collectMatches searches tabs or stash depending on current view", () => {
 	const state = createState()
 	state.wins = [

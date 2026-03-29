@@ -93,7 +93,7 @@ export function clearOverlayFrame(backdrop: HTMLDivElement) {
 export function applyOverlayTheme(
 	backdrop: HTMLDivElement,
 	modal: HTMLDivElement,
-	settings: Pick<SettingsData, "density" | "columnWidth" | "maxTitleLength">,
+	settings: Pick<SettingsData, "density" | "columnWidth">,
 	uiTheme: {
 		colorScheme: "dark" | "light"
 		text: { primary: string; muted: string; subtle: string }
@@ -102,6 +102,11 @@ export function applyOverlayTheme(
 	},
 ) {
 	const density = settings.density || "comfortable"
+	const baseColumnWidth = Number(settings.columnWidth || "360")
+	const effectiveColumnWidth =
+		density === "compact"
+			? Math.max(260, baseColumnWidth - 28)
+			: baseColumnWidth + 20
 
 	backdrop.style.colorScheme = uiTheme.colorScheme
 	backdrop.style.setProperty("--vtm-text-primary", uiTheme.text.primary)
@@ -115,25 +120,49 @@ export function applyOverlayTheme(
 	backdrop.style.setProperty("--vtm-modal-ring", uiTheme.modal.ring)
 	backdrop.style.setProperty(
 		"--vtm-card-padding-y",
-		density === "compact" ? "8px" : "10px",
+		density === "compact" ? "6px" : "14px",
 	)
 	backdrop.style.setProperty(
 		"--vtm-card-padding-x",
-		density === "compact" ? "10px" : "12px",
+		density === "compact" ? "8px" : "18px",
 	)
 	backdrop.style.setProperty(
 		"--vtm-col-min-width",
-		`${settings.columnWidth || "360"}px`,
+		`${effectiveColumnWidth}px`,
 	)
-	backdrop.style.setProperty(
-		"--vtm-title-max-ch",
-		settings.maxTitleLength || "64",
-	)
-	backdrop.style.setProperty("--vtm-col-gap", density === "compact" ? "10px" : "14px")
+	backdrop.style.setProperty("--vtm-col-gap", density === "compact" ? "8px" : "22px")
 	backdrop.style.setProperty(
 		"--vtm-col-padding",
-		density === "compact" ? "10px" : "12px",
+		density === "compact" ? "8px" : "18px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-topbar-padding-bottom",
+		density === "compact" ? "8px" : "18px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-footer-margin-top",
+		density === "compact" ? "8px" : "18px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-footer-gap",
+		density === "compact" ? "8px" : "12px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-footer-item-min-height",
+		density === "compact" ? "32px" : "40px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-footer-item-padding-x",
+		density === "compact" ? "8px" : "12px",
+	)
+	backdrop.style.setProperty(
+		"--vtm-footer-item-gap",
+		density === "compact" ? "8px" : "12px",
 	)
 
 	modal.style.color = uiTheme.text.primary
+	modal.style.width = density === "compact" ? "78vw" : "86vw"
+	modal.style.maxWidth = density === "compact" ? "1100px" : "1320px"
+	modal.style.height = density === "compact" ? "68vh" : "78vh"
+	modal.style.padding = density === "compact" ? "14px" : "22px"
 }

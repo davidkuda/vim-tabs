@@ -11,7 +11,7 @@ import { getCommandPaletteItems } from "./commands.js"
 import type { OverlayControllerContext } from "./controllers/types.js"
 import { curTab } from "./state.js"
 
-const settingsColumnCounts = [() => 16, () => 0, () => 4]
+const settingsColumnCounts = [() => 15, () => 0, () => 4]
 
 export function createEventHandlers({
 	backdrop,
@@ -130,12 +130,10 @@ export function createEventHandlers({
 	async function persistSettings() {
 		await saveSettings({
 			excludedDomains: state.settings.excludedDomains,
-			quickMarkSort: state.settings.quickMarkSort,
-			markAlphaOrder: state.settings.markAlphaOrder,
+			quickMarksOrder: state.settings.quickMarksOrder,
 			helpTextMode: state.settings.helpTextMode,
 			density: state.settings.density,
 			columnWidth: state.settings.columnWidth,
-			maxTitleLength: state.settings.maxTitleLength,
 			labelSize: state.settings.labelSize,
 			theme: state.settings.theme,
 		})
@@ -343,12 +341,10 @@ export function createEventHandlers({
 		state.settings.returnView = view === "settings" ? "tabs" : view
 		const settings = await getSettings()
 		state.settings.excludedDomains = settings.excludedDomains || []
-		state.settings.quickMarkSort = settings.quickMarkSort
-		state.settings.markAlphaOrder = settings.markAlphaOrder
+		state.settings.quickMarksOrder = settings.quickMarksOrder
 		state.settings.helpTextMode = settings.helpTextMode
 		state.settings.density = settings.density
 		state.settings.columnWidth = settings.columnWidth
-		state.settings.maxTitleLength = settings.maxTitleLength
 		state.settings.labelSize = settings.labelSize
 		state.settings.theme = settings.theme
 		clampSettingsSelection()
@@ -431,40 +427,36 @@ export function createEventHandlers({
 	async function applyCurrentSettingsOption() {
 		state.settings.status = ""
 		if (state.settings.sel.col === 2) {
-			if (state.settings.sel.rows[2] < 2) {
-				const sortMap = ["recent", "frequent"]
-				state.settings.quickMarkSort = sortMap[state.settings.sel.rows[2]]
-				state.settings.status = `Quick marks set to ${state.settings.quickMarkSort} first.`
-			} else {
-				const alphaMap = ["small-first", "capital-first"]
-				state.settings.markAlphaOrder = alphaMap[state.settings.sel.rows[2] - 2]
-				state.settings.status = `Alphabetical mark order set to ${state.settings.markAlphaOrder}.`
-			}
+			const quickMarksOrderMap = [
+				"recent",
+				"frequent",
+				"small-first",
+				"capital-first",
+			] as const
+			state.settings.quickMarksOrder =
+				quickMarksOrderMap[state.settings.sel.rows[2]]
+			state.settings.status = `Quick marks order set to ${state.settings.quickMarksOrder}.`
 		}
 		if (state.settings.sel.col === 0) {
 			if (state.settings.sel.rows[0] < 2) {
 				state.settings.density =
 					state.settings.sel.rows[0] === 0 ? "comfortable" : "compact"
 				state.settings.status = `Density set to ${state.settings.density}.`
-			} else if (state.settings.sel.rows[0] < 5) {
-				const widthMap = ["320", "360", "420"]
+			} else if (state.settings.sel.rows[0] < 7) {
+				const widthMap = ["300", "340", "360", "400", "440"]
 				state.settings.columnWidth = widthMap[state.settings.sel.rows[0] - 2]
 				state.settings.status = `Column width set to ${state.settings.columnWidth}px.`
-			} else if (state.settings.sel.rows[0] < 8) {
-				const titleMap = ["48", "64", "80"]
-				state.settings.maxTitleLength = titleMap[state.settings.sel.rows[0] - 5]
-				state.settings.status = `Max title length set to ${state.settings.maxTitleLength} characters.`
-			} else if (state.settings.sel.rows[0] < 11) {
+			} else if (state.settings.sel.rows[0] < 10) {
 				const sizeMap = ["small", "medium", "large"]
-				state.settings.labelSize = sizeMap[state.settings.sel.rows[0] - 8]
+				state.settings.labelSize = sizeMap[state.settings.sel.rows[0] - 7]
 				state.settings.status = `Window label size set to ${state.settings.labelSize}.`
-			} else if (state.settings.sel.rows[0] < 13) {
+			} else if (state.settings.sel.rows[0] < 12) {
 				const helpTextMap = ["normal", "minimal"]
-				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[0] - 11]
+				state.settings.helpTextMode = helpTextMap[state.settings.sel.rows[0] - 10]
 				state.settings.status = `Inline help text set to ${state.settings.helpTextMode}.`
 			} else {
 				const themeMap = ["rose-pine", "rose-pine-moon", "rose-pine-dawn"]
-				state.settings.theme = themeMap[state.settings.sel.rows[0] - 13]
+				state.settings.theme = themeMap[state.settings.sel.rows[0] - 12]
 				state.settings.status = `Theme set to ${state.settings.theme.replaceAll("-", " ")}.`
 			}
 		}
