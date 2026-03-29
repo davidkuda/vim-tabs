@@ -29,6 +29,13 @@ async function getFocusedTab() {
 	return tab
 }
 
+function isProtectedOverlayUrl(url: string | undefined) {
+	if (!url) return true
+	return /^(about:|brave:\/\/|chrome:\/\/|chrome-search:\/\/|edge:\/\/|vivaldi:\/\/|opera:\/\/)/.test(
+		url,
+	)
+}
+
 async function closeInjectedOverlay(tabId: number | undefined) {
 	return closeOverlayUi(tabId, false)
 }
@@ -100,6 +107,10 @@ async function dismissOverlaySession(sessionId: string | undefined) {
 		} catch {}
 	}
 
+	try {
+		await focusById(session.ownerTabId)
+	} catch {}
+
 	await teardownOverlaySession(sessionId)
 }
 
@@ -118,6 +129,7 @@ async function launchOverlay(tab, options = {}) {
 
 	const settings = await getSettings()
 	const overlayEnabled = settings.overlayMode
+	const needsFallbackPage = !overlayEnabled || isProtectedOverlayUrl(tab.url)
 
 	if (await closeInjectedOverlay(tab.id)) {
 		return
@@ -132,14 +144,13 @@ async function launchOverlay(tab, options = {}) {
 
 	let overlayHostTabId = tab.id
 
-	if (overlayEnabled) {
+	if (!needsFallbackPage) {
 		try {
 			await injectOverlay(tab.id, session.id)
 			await updateOverlayHostTab(session.id, tab.id)
 		} catch {
-			const fallback = await openFallbackPage(tab, session.id)
-			overlayHostTabId = fallback.id
-			await updateOverlayHostTab(session.id, fallback.id)
+			await teardownOverlaySession(session.id)
+			throw new Error(`Failed to inject VimTabs overlay into ${tab.url || "tab"}`)
 		}
 
 		if (!options.minimalPrompt) {
@@ -185,6 +196,9 @@ async function handleCommit(msg, senderTab) {
 	if (session.fallback?.tabId && senderTab?.id === session.fallback.tabId) {
 		try {
 			await chrome.tabs.remove(session.fallback.tabId)
+		} catch {}
+		try {
+			await focusById(session.ownerTabId)
 		} catch {}
 	}
 
@@ -250,6 +264,8 @@ chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
 	await Promise.all(
 		sessions
 			.filter((session) => {
+				if (session.ownerWindowId !== windowId) return false
+				if (!session.hostTabId && !session.fallback?.tabId) return false
 				const hostTabId = session.hostTabId || session.ownerTabId
 				const previewHelperIds = session.preview.entries.map((entry) => entry.helperTabId)
 				return (
@@ -267,7 +283,10 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 	const sessions = await listOverlaySessions()
 	await Promise.all(
 		sessions
-			.filter((session) => session.ownerWindowId !== windowId)
+			.filter((session) => {
+				if (!session.hostTabId && !session.fallback?.tabId) return false
+				return session.ownerWindowId !== windowId
+			})
 			.map((session) => dismissOverlaySession(session.id)),
 	)
 })
