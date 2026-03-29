@@ -1,4 +1,6 @@
 import { escapeHtml, formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
+import { createColumnPanel } from "../components/column-panel.js"
+import { createLinkCard } from "../components/link-card.js"
 import { getWindowColor } from "../shared/window-colors.js"
 import {
 	compareMarkKeys as compareMarkKeysByPreference,
@@ -181,7 +183,7 @@ export function createRenderer(state, columns, footer) {
 	}
 
 	function buildCard(tab, wi, ti) {
-		const card = document.createElement("vtm-link-card")
+		const card = createLinkCard()
 		card.dataset.w = wi
 		card.dataset.t = ti
 
@@ -266,7 +268,7 @@ export function createRenderer(state, columns, footer) {
 
 		state.wins.forEach((win, wi) => {
 			const windowColor = getWindowColor(win, wi, state.settings.theme)
-			const col = document.createElement("vtm-column-panel")
+			const col = createColumnPanel()
 			col.dataset.w = wi
 			col.setAttribute("data-title", windowColor.label)
 			col.setAttribute("data-accent", windowColor.accent)
@@ -528,7 +530,7 @@ export function createRenderer(state, columns, footer) {
 			column.appendChild(head)
 
 			session.tabs.forEach((tab, ti) => {
-				const item = document.createElement("vtm-link-card")
+				const item = createLinkCard()
 				item.className = "vtm-stash-tab"
 				item.dataset.s = si
 				item.dataset.t = ti
@@ -981,7 +983,7 @@ export function createRenderer(state, columns, footer) {
 		wrap.appendChild(prompt)
 
 		if (targetTab) {
-			const card = document.createElement("vtm-link-card")
+			const card = createLinkCard()
 			card.className = "vtm-card vtm-settings-card vtm-quick-mark-card"
 			card.data = {
 				title: targetTab.title || targetTab.url || "Current tab",

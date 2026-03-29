@@ -1,4 +1,4 @@
-import { registerLinkCard } from "./components/link-card.js"
+import { createLinkCard, registerLinkCard } from "./components/link-card.js"
 import { escapeHtml, getStashCounts, matchesTextQuery } from "./shared/ui.js"
 
 registerLinkCard()
@@ -119,7 +119,7 @@ registerLinkCard()
 			column.appendChild(head)
 
 			session.tabs.forEach((tab, ti) => {
-				const item = document.createElement("vtm-link-card")
+				const item = createLinkCard()
 				item.className = "vtm-stash-tab"
 				item.dataset.s = si
 				item.dataset.t = ti

@@ -1,33 +1,52 @@
+export type ColumnPanelElement = HTMLElement & {
+	body?: HTMLDivElement | null
+}
+
+function mountColumnPanel(element: ColumnPanelElement) {
+	if (element.body) return
+	const body = document.createElement("div")
+	const existing = [...element.childNodes]
+
+	element.classList.add("vtm-col")
+
+	const header = document.createElement("div")
+	header.className = "vtm-col-header"
+	header.textContent = element.getAttribute("data-title") || ""
+	header.style.background = element.getAttribute("data-accent") || ""
+
+	if (element.getAttribute("data-border")) {
+		element.style.borderColor = element.getAttribute("data-border") || ""
+	}
+	if (element.getAttribute("data-surface")) {
+		element.style.background = element.getAttribute("data-surface") || ""
+	}
+
+	element.replaceChildren(header, body)
+	body.append(...existing)
+	element.body = body
+}
+
 export function registerColumnPanel() {
-	if (customElements.get("vtm-column-panel")) return
+	const registry = globalThis.customElements
+	if (!registry) return
+	if (registry.get("vtm-column-panel")) return
 
 	class VimTabsColumnPanel extends HTMLElement {
 		body: HTMLDivElement | null = null
 
 		connectedCallback() {
-			if (this.body) return
-			const body = document.createElement("div")
-			const existing = [...this.childNodes]
-
-			this.classList.add("vtm-col")
-
-			const header = document.createElement("div")
-			header.className = "vtm-col-header"
-			header.textContent = this.getAttribute("data-title") || ""
-			header.style.background = this.getAttribute("data-accent") || ""
-
-			if (this.getAttribute("data-border")) {
-				this.style.borderColor = this.getAttribute("data-border") || ""
-			}
-			if (this.getAttribute("data-surface")) {
-				this.style.background = this.getAttribute("data-surface") || ""
-			}
-
-			this.replaceChildren(header, body)
-			body.append(...existing)
-			this.body = body
+			mountColumnPanel(this)
 		}
 	}
 
-	customElements.define("vtm-column-panel", VimTabsColumnPanel)
+	registry.define("vtm-column-panel", VimTabsColumnPanel)
+}
+
+export function createColumnPanel() {
+	if (globalThis.customElements?.get("vtm-column-panel")) {
+		return document.createElement("vtm-column-panel") as ColumnPanelElement
+	}
+
+	const element = document.createElement("section") as ColumnPanelElement
+	return element
 }
