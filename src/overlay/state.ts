@@ -14,6 +14,13 @@ export interface OverlaySearchSnapshot {
 	stash: { s: number; t: number }
 }
 
+export interface CommandPaletteItem {
+	id: string
+	title: string
+	subtitle: string
+	keys: string
+}
+
 export interface OverlayState {
 	wins: WindowDescriptor[]
 	sel: { w: number; t: number }
@@ -55,6 +62,12 @@ export interface OverlayState {
 		query: string
 		lastQuery: string
 		originSel: OverlaySearchSnapshot | null
+	}
+	command: {
+		active: boolean
+		query: string
+		sel: number
+		items: CommandPaletteItem[]
 	}
 }
 
@@ -107,6 +120,12 @@ export function createState(): OverlayState {
 			query: "",
 			lastQuery: "",
 			originSel: null,
+		},
+		command: {
+			active: false,
+			query: "",
+			sel: 0,
+			items: [],
 		},
 	}
 }

@@ -1,3 +1,4 @@
+import { applyOverlayAction, type OverlayAction } from "./reducer.js"
 import { createState } from "./state.js"
 
 export function createOverlayStore() {
@@ -24,31 +25,27 @@ export function createOverlayStore() {
 		state.stash.sel = { ...snapshot.stash }
 	}
 
+	function dispatch(action: OverlayAction) {
+		applyOverlayAction(state, action)
+	}
+
 	function startSearch(renderTabs) {
-		state.marks.pending = null
-		state.marks.status = ""
-		state.search.active = true
-		state.search.query = ""
-		state.search.originSel = getSelectionSnapshot()
+		dispatch({ type: "search/start", snapshot: getSelectionSnapshot() })
 		renderTabs()
 	}
 
 	function cancelSearch(renderTabs) {
-		restoreSelectionSnapshot(state.search.originSel)
-		state.search.active = false
-		state.search.query = ""
-		state.search.originSel = null
+		dispatch({ type: "search/cancel", snapshot: state.search.originSel })
 		renderTabs()
 	}
 
 	function finishSearch(renderTabs) {
-		state.search.active = false
-		state.search.query = ""
-		state.search.originSel = null
+		dispatch({ type: "search/finish" })
 		renderTabs()
 	}
 
 	return {
+		dispatch,
 		state,
 		cancelSearch,
 		finishSearch,

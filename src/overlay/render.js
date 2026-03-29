@@ -1,5 +1,9 @@
 import { formatUrl, getStashCounts, matchesTextQuery } from "../shared/ui.js"
 import { getWindowColor } from "../shared/window-colors.js"
+import {
+	compareMarkKeys as compareMarkKeysByPreference,
+	getMarkColumns as getMarkColumnsFromState,
+} from "./selectors.js"
 
 const layoutOptions = {
 	density: [
@@ -120,6 +124,7 @@ export function createRenderer(state, columns, footer) {
 				${item(":", "Settings", "settings")}
 				${item('"', "Stash", "stash")}
 				${item("M", "Marks", "marks")}
+				${item(">", "Commands", "commands")}
 				${item("ESC", "Exit", "exit")}
 			</div>
 		`
@@ -129,40 +134,8 @@ export function createRenderer(state, columns, footer) {
 		return state.settings.helpTextMode === "minimal" ? minimalText : normalText
 	}
 
-	function compareMarks(a, b) {
-		const recentDiff = (b.lastUsedAt || 0) - (a.lastUsedAt || 0)
-		const usageDiff = (b.usageCount || 0) - (a.usageCount || 0)
-		if (state.settings.quickMarkSort === "recent") {
-			if (recentDiff !== 0) return recentDiff
-			if (usageDiff !== 0) return usageDiff
-		} else {
-			if (usageDiff !== 0) return usageDiff
-			if (recentDiff !== 0) return recentDiff
-		}
-		return compareMarkKeys(a.key, b.key)
-	}
-
 	function compareMarkKeys(a, b) {
-		const foldedDiff = a.toLowerCase().localeCompare(b.toLowerCase())
-		if (foldedDiff !== 0) return foldedDiff
-		if (a === b) return 0
-		if (state.settings.markAlphaOrder === "capital-first") {
-			return a === a.toUpperCase() ? -1 : 1
-		}
-		return a === a.toLowerCase() ? -1 : 1
-	}
-
-	function getMarkColumns() {
-		const marks = Object.values(state.marks.items || {})
-		const sortMarks =
-			state.marks.mode === "quick"
-				? [...marks].sort(compareMarks)
-				: [...marks].sort((a, b) => compareMarkKeys(a.key, b.key))
-		if (state.marks.mode === "quick") return [sortMarks, []]
-		return [
-			sortMarks.filter((mark) => mark.key === mark.key.toLowerCase() && mark.live),
-			sortMarks.filter((mark) => mark.key === mark.key.toUpperCase()),
-		]
+		return compareMarkKeysByPreference(a, b, state.settings.markAlphaOrder)
 	}
 
 	function escapeHtml(text) {
@@ -346,7 +319,7 @@ export function createRenderer(state, columns, footer) {
 		}
 
 		footer.innerHTML = `
-			${renderFooterNav("", "")}
+			${renderFooterNav("", "Press <code>Ctrl+Shift+P</code> or <code>&gt;</code> for commands.")}
 		`
 	}
 
@@ -425,6 +398,7 @@ export function createRenderer(state, columns, footer) {
 				<p><strong>Queued deletes:</strong> pressing <code>d</code> does not close the tab immediately. It marks that tab for deletion inside the overlay. Use <code>u</code> if you want to undo the most recent queued delete before applying.</p>
 				<p><strong>Yank and paste:</strong> pressing <code>y</code> stores the selected tab as a temporary entry. Use <code>p</code> or <code>P</code> to insert a copy of that tab below or above the current position, including into another window column.</p>
 				<p><strong>Global navigation:</strong> press <code>?</code> for help, <code>:</code> for settings, <code>"</code> for stash, <code>M</code> for marks, and <code>Esc</code> to leave the current overlay view.</p>
+				<p><strong>Command palette:</strong> press <code>Ctrl+Shift+P</code> or <code>&gt;</code> to search available actions for the current context.</p>
 			`
 		}
 
@@ -794,7 +768,7 @@ export function createRenderer(state, columns, footer) {
 	function renderMarks() {
 		columns.innerHTML = ""
 		const quickMode = state.marks.mode === "quick"
-		const markColumns = getMarkColumns()
+		const markColumns = getMarkColumnsFromState(state)
 		const quickMarks = [...markColumns[0], ...markColumns[1]]
 
 		if (quickMode) {
@@ -1055,25 +1029,67 @@ export function createRenderer(state, columns, footer) {
 		applyShellMode()
 		if (state.view === "tabs") {
 			renderTabs()
-			return
-		}
-		if (state.view === "help") {
+		} else if (state.view === "help") {
 			renderHelp()
-			return
-		}
-		if (state.view === "settings") {
+		} else if (state.view === "settings") {
 			renderSettings()
-			return
-		}
-		if (state.view === "marks") {
+		} else if (state.view === "marks") {
 			renderMarks()
-			return
-		}
-		if (state.view === "mark-create") {
+		} else if (state.view === "mark-create") {
 			renderMarkCreate()
-			return
+		} else {
+			renderStash()
 		}
-		renderStash()
+		renderCommandPalette()
+	}
+
+	function renderCommandPalette() {
+		document.querySelector(".vtm-command-palette")?.remove()
+		if (!state.command.active) return
+
+		const palette = document.createElement("section")
+		palette.className = "vtm-command-palette"
+
+		const input = document.createElement("div")
+		input.className = "vtm-command-input"
+		input.innerHTML = `
+			<div class="vtm-command-label">Command Palette</div>
+			<div class="vtm-command-query">${escapeHtml(state.command.query || "Type to filter commands")}</div>
+		`
+		palette.appendChild(input)
+
+		const list = document.createElement("div")
+		list.className = "vtm-command-list"
+
+		if (!state.command.items.length) {
+			const empty = document.createElement("div")
+			empty.className = "vtm-card vtm-command-item"
+			empty.innerHTML = `
+				<div class="vtm-meta">
+					<span class="vtm-title">No commands found</span>
+					<span class="vtm-url">Try a different search.</span>
+				</div>
+			`
+			list.appendChild(empty)
+		} else {
+			state.command.items.forEach((item, index) => {
+				const row = document.createElement("div")
+				row.className = `vtm-card vtm-command-item${index === state.command.sel ? " vtm-selected" : ""}`
+				row.innerHTML = `
+					<div class="vtm-meta">
+						<div class="vtm-title-row">
+							<span class="vtm-title">${escapeHtml(item.title)}</span>
+							<span class="vtm-mark-badge">${escapeHtml(item.keys)}</span>
+						</div>
+						<span class="vtm-url">${escapeHtml(item.subtitle)}</span>
+					</div>
+				`
+				list.appendChild(row)
+			})
+		}
+
+		palette.appendChild(list)
+		columns.appendChild(palette)
 	}
 
 	return {

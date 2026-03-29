@@ -150,7 +150,7 @@
 
 .vtm-footer-nav {
 	display: grid;
-	grid-template-columns: repeat(5, minmax(0, 1fr));
+	grid-template-columns: repeat(6, minmax(0, 1fr));
 	gap: 10px;
 	align-items: stretch;
 }
@@ -439,6 +439,62 @@
 	gap: 10px;
 	overflow-y: auto;
 	padding-right: 4px;
+}
+
+.vtm-command-palette {
+	position: absolute;
+	top: 56px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(760px, calc(100% - 48px));
+	max-height: calc(100% - 120px);
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px;
+	border-radius: 22px;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+		rgba(42, 39, 63, 0.96);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow:
+		0 24px 60px rgba(7, 6, 7, 0.34),
+		0 8px 20px rgba(0, 0, 0, 0.14);
+	backdrop-filter: blur(18px) saturate(1.05);
+	z-index: 2;
+}
+
+.vtm-command-input {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px 4px 2px;
+}
+
+.vtm-command-label {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--vtm-text-subtle);
+}
+
+.vtm-command-query {
+	font-size: 16px;
+	line-height: 1.4;
+	color: var(--vtm-text-primary);
+}
+
+.vtm-command-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
+.vtm-command-item {
+	min-height: 62px;
 }
 
 .vtm-quick-mark-card {
