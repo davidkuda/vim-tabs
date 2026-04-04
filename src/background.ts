@@ -56,6 +56,7 @@ async function closeOverlayUi(
 	try {
 		const [result] = await chrome.scripting.executeScript({
 			target: { tabId },
+			world: "ISOLATED",
 			func: (shouldDiscard) => {
 				const closeFn = shouldDiscard
 					? (window as Window & { __vtmDiscardOverlay?: () => void })

@@ -20,6 +20,7 @@ export async function injectOverlay(tabId: number, sessionId: string) {
 	})
 	await chrome.scripting.executeScript({
 		target: { tabId },
+		world: "ISOLATED",
 		func: (value) => {
 			;(window as Window & { __VTM_SESSION_ID?: string }).__VTM_SESSION_ID = value
 		},
@@ -27,6 +28,7 @@ export async function injectOverlay(tabId: number, sessionId: string) {
 	})
 	await chrome.scripting.executeScript({
 		target: { tabId },
+		world: "ISOLATED",
 		files: ["overlay.js"],
 	})
 }
@@ -120,6 +122,7 @@ export async function clearWindowBorders(tabs: Array<{ id?: number }>) {
 		try {
 			await chrome.scripting.executeScript({
 				target: { tabId: tab.id },
+				world: "ISOLATED",
 				func: unmountWindowBorder,
 				args: [WINDOW_BORDER_ID],
 			})
@@ -179,6 +182,7 @@ export async function showWindowPreviews(
 			const windowColor = getWindowColor(win as never, index, settings.theme)
 			await chrome.scripting.executeScript({
 				target: { tabId: activeTab.id },
+				world: "ISOLATED",
 				func: mountWindowBorder,
 				args: [
 					WINDOW_BORDER_ID,
